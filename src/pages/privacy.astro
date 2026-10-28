@@ -1,4 +1,9 @@
 ---
-import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Privacy | GearPilot AI</title></head><body><header><a href="/">GearPilot AI — Home</a></header><main><h1>Privacy notice — prototype</h1><p>This prototype does not intentionally collect personal details, create accounts, or use first-party analytics cookies. Hosting providers may process basic request logs. Before launching analytics, newsletters, or affiliate tracking, update this notice with actual providers, data categories, retention periods, rights, and contact details.</p><p>Do not treat this placeholder as a complete production privacy policy.</p></main></body></html>
+<BaseLayout title="Privacy Notice | GearPilot AI" description="The current privacy posture of the GearPilot AI demonstration site." canonicalPath="/privacy/">
+  <h1>Privacy notice — demonstration site</h1>
+  <p>This demonstration site does not provide accounts, forms, a newsletter, first-party analytics, or intentionally set first-party tracking cookies. It does not intentionally collect personal details through the site interface.</p>
+  <p>Cloudflare, as the hosting provider, may process basic request information to deliver and secure the service. We do not currently name a retention period or contact because no production privacy program or public contact route has been established.</p>
+  <p>Before public launch, this notice must be replaced with the actual controller contact, providers, data categories, purposes, legal basis where applicable, retention, data-sharing details, user rights, and affiliate/analytics tracking disclosures.</p>
+</BaseLayout>

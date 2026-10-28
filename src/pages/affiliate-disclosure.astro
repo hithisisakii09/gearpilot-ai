@@ -1,4 +1,11 @@
 ---
-import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Affiliate Disclosure | GearPilot AI</title></head><body><header><a href="/">GearPilot AI — Home</a></header><main><h1>Affiliate disclosure</h1><p>GearPilot AI may earn a commission when visitors buy through qualifying affiliate links, at no additional cost to the buyer. Rankings are not determined by commission rates.</p><p>There are currently no live affiliate offers in the demonstration catalog. We will identify participating programs and include any program-specific required language before enabling their links.</p></main></body></html>
+<BaseLayout title="Affiliate Disclosure | GearPilot AI" description="How GearPilot AI handles affiliate relationships, sponsored links, and ranking independence." canonicalPath="/affiliate-disclosure/">
+  <h1>Affiliate disclosure</h1>
+  <p>GearPilot AI may earn a commission when a visitor purchases through an approved affiliate link, at no additional cost to the buyer. A commission never changes a product’s eligibility, score, or order.</p>
+  <h2>Current status</h2>
+  <p>The catalog currently contains synthetic demonstration records and no purchase links. GearPilot AI does not claim participation in any merchant program at this time.</p>
+  <h2>How future links will work</h2>
+  <p>We will show an outbound link only after the relevant program and destination have been approved and recorded in the catalog. Sponsored links will use <code>rel="sponsored nofollow noopener noreferrer"</code>. If no approved link is available, the page will say so rather than guessing a tracking URL.</p>
+</BaseLayout>

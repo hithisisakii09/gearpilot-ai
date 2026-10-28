@@ -1,4 +1,10 @@
 ---
-import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Methodology | GearPilot AI</title></head><body><header><a href="/">GearPilot AI — Home</a></header><main><h1>How we rank products</h1><p>We first filter products by the selected market, known landed price, required dimensions, and product features. We then calculate a weighted score using price, mechanical capability, warranty, usability, features, and evidence confidence.</p><p>For value rankings, weights are 30%, 20%, 20%, 15%, 10%, and 5% respectively. Affiliate commissions never influence scores. Scores are not equivalent to hands-on testing.</p><p>Current examples are fictional and for software demonstration only. Before listing real products we will verify merchant permissions, evidence, price freshness and product claims.</p></main></body></html>
+<BaseLayout title="Methodology | GearPilot AI" description="The transparent standing desk eligibility and scoring methodology used by GearPilot AI." canonicalPath="/methodology/">
+  <h1>How we compare standing desks</h1>
+  <p>First, we filter to the US market and require known mandatory shipping, in-stock availability, a price within the selected budget, workspace dimensions, height range, lift capacity, and any required electric adjustment.</p>
+  <p>Eligible products receive a deterministic comparison score. Value weights price most heavily; quality weights capacity and warranty; workspace fit weights desktop size and height range. The calculation uses documented price, dimensions, capacity, warranty, and evidence status—never affiliate commission rates.</p>
+  <p>A record marked verified must include product and offer source URLs. A demo record is clearly marked synthetic and can never be presented as a real listing, price, review, or hands-on test.</p>
+  <p>Scores compare the eligible catalog entries for the selected criteria. They are not star ratings or claims of hands-on testing.</p>
+</BaseLayout>

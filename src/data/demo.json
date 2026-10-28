@@ -1,12 +1,14 @@
 {
+  "catalogStatus": "demo",
+  "lastUpdatedAt": "2026-10-29T00:00:00Z",
   "products": [
-    {"id":"demo-a","brand":"Demo","model":"Desk A","category":"standing_desk","market":"US","isDemo":true,"electric":true,"widthInches":48,"minHeightInches":28,"maxHeightInches":47,"liftCapacityKg":70,"warrantyYears":3,"mechanicalScore":75,"usabilityScore":80,"featureScore":65,"evidenceScore":70,"evidence":[]},
-    {"id":"demo-b","brand":"Demo","model":"Desk B","category":"standing_desk","market":"US","isDemo":true,"electric":true,"widthInches":55,"minHeightInches":25,"maxHeightInches":50,"liftCapacityKg":100,"warrantyYears":5,"mechanicalScore":95,"usabilityScore":90,"featureScore":85,"evidenceScore":70,"evidence":[]},
-    {"id":"demo-c","brand":"Demo","model":"Desk C","category":"standing_desk","market":"US","isDemo":true,"electric":false,"widthInches":40,"minHeightInches":29,"maxHeightInches":44,"liftCapacityKg":45,"warrantyYears":1,"mechanicalScore":55,"usabilityScore":65,"featureScore":50,"evidenceScore":60,"evidence":[]}
+    {"id":"demo-desk-a","brand":"Demo","model":"Desk A","category":"standing_desk","market":"US","dataStatus":"demo","specifications":{"electric":true,"desktopWidthInches":48,"desktopDepthInches":24,"minHeightInches":28,"maxHeightInches":47,"liftCapacityLbs":154,"warrantyYears":3},"pros":[],"cons":[],"comparisonAttributes":{"recordType":"synthetic demonstration"},"sourceUrls":[],"lastUpdatedAt":"2026-10-29T00:00:00Z"},
+    {"id":"demo-desk-b","brand":"Demo","model":"Desk B","category":"standing_desk","market":"US","dataStatus":"demo","specifications":{"electric":true,"desktopWidthInches":55,"desktopDepthInches":28,"minHeightInches":25,"maxHeightInches":50,"liftCapacityLbs":220,"warrantyYears":5},"pros":[],"cons":[],"comparisonAttributes":{"recordType":"synthetic demonstration"},"sourceUrls":[],"lastUpdatedAt":"2026-10-29T00:00:00Z"},
+    {"id":"demo-desk-c","brand":"Demo","model":"Desk C","category":"standing_desk","market":"US","dataStatus":"demo","specifications":{"electric":false,"desktopWidthInches":40,"desktopDepthInches":20,"minHeightInches":29,"maxHeightInches":44,"liftCapacityLbs":99,"warrantyYears":1},"pros":[],"cons":[],"comparisonAttributes":{"recordType":"synthetic demonstration"},"sourceUrls":[],"lastUpdatedAt":"2026-10-29T00:00:00Z"}
   ],
   "offers": [
-    {"id":"offer-a","productId":"demo-a","merchant":"Fictional demo retailer","market":"US","currency":"USD","itemPriceCents":32900,"mandatoryShippingCents":0,"available":true,"lastVerifiedAt":"2026-10-28","approvedDataUse":true},
-    {"id":"offer-b","productId":"demo-b","merchant":"Fictional demo retailer","market":"US","currency":"USD","itemPriceCents":44900,"mandatoryShippingCents":0,"available":true,"lastVerifiedAt":"2026-10-28","approvedDataUse":true},
-    {"id":"offer-c","productId":"demo-c","merchant":"Fictional demo retailer","market":"US","currency":"USD","itemPriceCents":25900,"mandatoryShippingCents":0,"available":true,"lastVerifiedAt":"2026-10-28","approvedDataUse":true}
+    {"id":"demo-offer-a","productId":"demo-desk-a","retailer":"Fictional demo retailer","market":"US","dataStatus":"demo","currency":"USD","priceCents":32900,"mandatoryShippingCents":0,"priceVerifiedAt":"2026-10-29T00:00:00Z","availability":"in_stock","affiliateProgramStatus":"unavailable","sourceUrls":[],"lastUpdatedAt":"2026-10-29T00:00:00Z"},
+    {"id":"demo-offer-b","productId":"demo-desk-b","retailer":"Fictional demo retailer","market":"US","dataStatus":"demo","currency":"USD","priceCents":44900,"mandatoryShippingCents":0,"priceVerifiedAt":"2026-10-29T00:00:00Z","availability":"in_stock","affiliateProgramStatus":"unavailable","sourceUrls":[],"lastUpdatedAt":"2026-10-29T00:00:00Z"},
+    {"id":"demo-offer-c","productId":"demo-desk-c","retailer":"Fictional demo retailer","market":"US","dataStatus":"demo","currency":"USD","priceCents":25900,"mandatoryShippingCents":0,"priceVerifiedAt":"2026-10-29T00:00:00Z","availability":"in_stock","affiliateProgramStatus":"unavailable","sourceUrls":[],"lastUpdatedAt":"2026-10-29T00:00:00Z"}
   ]
 }
