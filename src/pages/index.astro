@@ -1,11 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import demo from '../data/demo.json';
-import { CatalogSchema } from '../lib/schema';
-import { getApprovedAffiliateLink } from '../lib/affiliate';
+import affiliatePrograms from '../data/affiliate-programs.json';
+import { AffiliateRegistrySchema, CatalogSchema } from '../lib/schema';
+import { resolveAffiliateLink } from '../lib/affiliate';
 import { recommend, type Criteria } from '../lib/recommend';
 
 const catalog = CatalogSchema.parse(demo);
+const affiliateRegistry = AffiliateRegistrySchema.parse(affiliatePrograms);
 const defaultCriteria: Criteria = { budgetCents: 50000, minDesktopWidthInches: 48, minDesktopDepthInches: 24, targetMinHeightInches: 28, targetMaxHeightInches: 47, minLiftCapacityLbs: 150, electricRequired: true, workspace: 'standard', preference: 'value', market: 'US' };
 const results = recommend(catalog.products, catalog.offers, defaultCriteria);
 ---
@@ -33,7 +35,7 @@ const results = recommend(catalog.products, catalog.offers, defaultCriteria);
     <p id="result-summary" class="muted">Scores compare only the eligible demonstration records and are not ratings.</p>
     <div id="recommendations" class="grid" aria-live="polite">
       {results.length ? results.map((result, index) => {
-        const affiliateLink = getApprovedAffiliateLink(result.offer);
+        const affiliateLink = resolveAffiliateLink(result.product, result.offer, affiliateRegistry.programs);
         const source = result.product.sources[0];
         return <article class="card"><span class="pill">#{index + 1} - {result.score}/100</span><h3>{result.product.brand} {result.product.model}</h3><p class="muted">Data status: {result.product.dataStatus.replace('_', ' ')}</p><p>${(result.totalCents / 100).toFixed(2)} USD - {result.product.specifications?.desktopWidthInches} by {result.product.specifications?.desktopDepthInches} in desktop</p><h4>Why it matched</h4><ul>{result.explanation.map((reason) => <li>{reason}</li>)}</ul>{source ? <p><a href={source.url} rel="noopener noreferrer" target="_blank">Product source (observed {source.observedAt.slice(0, 10)})</a></p> : null}{affiliateLink ? <a href={affiliateLink.href} rel={affiliateLink.rel} target="_blank">View approved retailer offer</a> : <p class="muted">No approved purchase link is available.</p>}</article>;
       }) : <p class="card">No catalog entries match these requirements. Real products are shown only when their required product, price, and availability evidence is verified and fresh.</p>}

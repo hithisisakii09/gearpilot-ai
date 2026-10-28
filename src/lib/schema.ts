@@ -10,8 +10,57 @@ export const CategorySchema = z.enum(['standing_desk', 'ergonomic_chair', 'monit
 export const DataStatusSchema = z.enum(['verified', 'partially_verified', 'unverified', 'demo']);
 export const AvailabilitySchema = z.enum(['in_stock', 'out_of_stock', 'discontinued', 'unknown']);
 export const AffiliateProgramStatusSchema = z.enum(['approved', 'pending', 'not_participating', 'unavailable']);
+export const AffiliateProgramLifecycleStatusSchema = z.enum(['not_applied', 'applied', 'pending', 'approved', 'rejected', 'suspended', 'expired']);
 export const ImageUsagePermissionSchema = z.enum(['licensed', 'manufacturer_authorized', 'unknown', 'not_provided']);
 export const SourceKindSchema = z.enum(['manufacturer_product_page', 'manufacturer_specification', 'authorized_merchant', 'manual']);
+
+const DomainSchema = z.string().trim().toLowerCase().regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/);
+const CredentialReferenceSchema = z.string().regex(/^credential-ref:[a-z0-9][a-z0-9_./:-]*$/);
+
+export const AffiliateApprovalEvidenceSchema = z.object({
+  reference: z.string().min(1).max(200),
+  reviewedAt: TimestampSchema,
+  sourceUrl: z.url().optional(),
+  note: z.string().min(1).max(500).optional(),
+});
+
+export const AffiliateProgramSchema = z.object({
+  id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
+  merchantName: z.string().min(1),
+  officialWebsite: z.url(),
+  applicationUrl: z.url().nullable(),
+  programName: z.string().min(1).nullable(),
+  networkName: z.string().min(1).nullable(),
+  allowedRegions: z.array(MarketSchema).default([]),
+  approvedDestinationDomains: z.array(DomainSchema).default([]),
+  approvalEvidence: AffiliateApprovalEvidenceSchema.nullable(),
+  approvalDate: TimestampSchema.nullable(),
+  trackingIdReference: CredentialReferenceSchema.nullable(),
+  status: AffiliateProgramLifecycleStatusSchema,
+  expiresAt: z.iso.datetime({ offset: true }).nullable(),
+  reviewNotes: z.string().min(1).nullable(),
+  lastReviewedAt: TimestampSchema,
+}).superRefine((program, context) => {
+  const needsApprovalProof = program.status === 'approved';
+  if (needsApprovalProof && !program.programName) context.addIssue({ code: 'custom', path: ['programName'], message: 'Approved programs require a program name' });
+  if (needsApprovalProof && !program.approvalEvidence) context.addIssue({ code: 'custom', path: ['approvalEvidence'], message: 'Approved programs require approval evidence' });
+  if (needsApprovalProof && !program.approvalDate) context.addIssue({ code: 'custom', path: ['approvalDate'], message: 'Approved programs require an approval date' });
+  if (needsApprovalProof && !program.trackingIdReference) context.addIssue({ code: 'custom', path: ['trackingIdReference'], message: 'Approved programs require a credential reference' });
+  if (needsApprovalProof && program.approvedDestinationDomains.length === 0) context.addIssue({ code: 'custom', path: ['approvedDestinationDomains'], message: 'Approved programs require at least one approved destination domain' });
+  if (program.status !== 'approved' && program.approvedDestinationDomains.length > 0) context.addIssue({ code: 'custom', path: ['approvedDestinationDomains'], message: 'Only approved programs may have approved destination domains' });
+  if (program.status === 'expired' && !program.expiresAt) context.addIssue({ code: 'custom', path: ['expiresAt'], message: 'Expired programs require an expiry timestamp' });
+});
+
+export const AffiliateRegistrySchema = z.object({
+  lastReviewedAt: TimestampSchema,
+  programs: z.array(AffiliateProgramSchema),
+}).superRefine((registry, context) => {
+  const ids = new Set<string>();
+  for (const [index, program] of registry.programs.entries()) {
+    if (ids.has(program.id)) context.addIssue({ code: 'custom', path: ['programs', index, 'id'], message: 'Affiliate program IDs must be unique' });
+    ids.add(program.id);
+  }
+});
 
 export const SourceSchema = z.object({
   id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
@@ -125,12 +174,14 @@ export const OfferSchema = z.object({
   availabilityObservedAt: TimestampSchema.nullable().default(null),
   availabilityObservations: z.array(AvailabilityObservationSchema).default([]),
   affiliateProgramStatus: AffiliateProgramStatusSchema,
+  affiliateProgramId: z.string().min(1).optional(),
   affiliateUrl: z.url().optional(),
   sourceUrls: z.array(z.url()).default([]),
   reviewNotes: z.string().min(1).nullable().default(null),
   lastUpdatedAt: TimestampSchema,
 }).superRefine((offer, context) => {
   if (offer.affiliateProgramStatus === 'approved' && !offer.affiliateUrl) context.addIssue({ code: 'custom', path: ['affiliateUrl'], message: 'Approved affiliate offers require an approved affiliate URL' });
+  if (offer.affiliateProgramStatus === 'approved' && !offer.affiliateProgramId) context.addIssue({ code: 'custom', path: ['affiliateProgramId'], message: 'Approved affiliate offers require an affiliate program ID' });
   if (offer.affiliateProgramStatus !== 'approved' && offer.affiliateUrl) context.addIssue({ code: 'custom', path: ['affiliateUrl'], message: 'Only approved affiliate offers may include an affiliate URL' });
   if (offer.priceCents !== null && !offer.priceVerifiedAt) context.addIssue({ code: 'custom', path: ['priceVerifiedAt'], message: 'Known prices require an observation timestamp' });
   if (offer.priceCents !== null && offer.priceObservations.length === 0 && offer.dataStatus !== 'demo') context.addIssue({ code: 'custom', path: ['priceObservations'], message: 'Non-demo prices require a sourced price observation' });
@@ -161,3 +212,5 @@ export const CatalogSchema = z.object({
 export type Product = z.infer<typeof ProductSchema>;
 export type Offer = z.infer<typeof OfferSchema>;
 export type Catalog = z.infer<typeof CatalogSchema>;
+export type AffiliateProgram = z.infer<typeof AffiliateProgramSchema>;
+export type AffiliateRegistry = z.infer<typeof AffiliateRegistrySchema>;
