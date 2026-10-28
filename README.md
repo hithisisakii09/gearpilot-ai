@@ -1,6 +1,6 @@
 # GearPilot AI
 
-Evidence-first US home-office product comparison MVP, with synthetic standing desk examples.
+Evidence-first US home-office comparison MVP. The current standing-desk catalog is synthetic demonstration data, not real products, prices, reviews, or purchase recommendations.
 
 ## Quick start
 
@@ -18,15 +18,16 @@ Open http://localhost:4321
 ```bash
 npm test
 npm run build
+npm audit
 ```
 
 ## Deployment
 
-Connect this GitHub repository to Cloudflare Pages. Framework: Astro; build command: `npm run build`; output directory: `dist`; Node.js: 22. Update `astro.config.mjs` `site` to your actual deployment URL. Review Cloudflare's current free tier and terms before production use.
+This repository uses Cloudflare Workers static assets through `wrangler.jsonc`; build output is `dist`. The site URL is configured in `astro.config.mjs`. Do not deploy unverified changes automatically.
 
 ## Product safety
 
-All initial catalog products and offers are fictional. Never represent synthetic products as real listings. Real merchant data requires approved usage rights, verified claims, suitable evidence, affiliate disclosures and valid program participation.
+All initial catalog products and offers are fictional. Never represent synthetic products as real listings. Real merchant data requires approved usage rights, verified claims, suitable evidence, affiliate disclosures, valid program participation, and source URLs. See `docs/PRODUCT_DATA_ARCHITECTURE.md`, `docs/AFFILIATE_INTEGRATION_PLAN.md`, and `docs/PHASE2_RELEASE_CHECKLIST.md`.
 
 ## Next milestones
 

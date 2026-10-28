@@ -1,15 +1,71 @@
 ---
-import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
 import demo from '../data/demo.json';
-import { ProductSchema, OfferSchema } from '../lib/schema';
-import { recommend } from '../lib/recommend';
-const products = demo.products.map(p=>ProductSchema.parse(p));
-const offers = demo.offers.map(o=>OfferSchema.parse(o));
-const results = recommend(products,offers,{budgetCents:50000,minWidthInches:48,electricRequired:true,preference:'value',market:'US'});
+import { CatalogSchema } from '../lib/schema';
+import { getApprovedAffiliateLink } from '../lib/affiliate';
+import { recommend, type Criteria } from '../lib/recommend';
+
+const catalog = CatalogSchema.parse(demo);
+const defaultCriteria: Criteria = { budgetCents: 50000, minDesktopWidthInches: 48, minDesktopDepthInches: 24, targetMinHeightInches: 28, targetMaxHeightInches: 47, minLiftCapacityLbs: 150, electricRequired: true, workspace: 'standard', preference: 'value', market: 'US' };
+const results = recommend(catalog.products, catalog.offers, defaultCriteria);
 ---
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>GearPilot AI | Home Office Product Comparisons</title><meta name="description" content="Evidence-first comparison tools for US home office equipment. Demonstration catalog only."/></head>
-<body><header><nav><strong>GearPilot AI</strong><a href="/">Home</a><a href="/methodology/">Methodology</a><a href="/affiliate-disclosure/">Affiliate Disclosure</a><a href="/privacy/">Privacy</a><a href="/contact/">Contact</a></nav></header>
-<main><span class="pill">US market · Prototype</span><h1>Choose home-office equipment with confidence.</h1><p class="muted">Evidence-first comparisons with transparent scores and independent rankings.</p>
-<section class="card"><h2>Standing desk recommendations</h2><p><strong>Demo only:</strong> These are fictional desks and prices. No purchase links are available.</p><p>Filters: electric · 48-inch minimum width · $500 maximum · value priority.</p><div class="grid">{results.map((r,i)=><article class="card"><span class="pill">#{i+1} · {r.score}/100</span><h3>{r.product.model}</h3><p>${(r.totalCents/100).toFixed(2)} · {r.product.widthInches} inches</p><p>{r.explanation.join(' ')}</p><p class="muted">Synthetic data; not a real product review.</p></article>)}</div></section>
-<section><h2>Coming next</h2><div class="grid"><div class="card">Ergonomic chairs</div><div class="card">Monitor arms</div><div class="card">Docking stations</div></div></section></main>
-<footer>GearPilot AI is a prototype. <a href="/affiliate-disclosure/">Affiliate disclosure</a> · <a href="/methodology/">Editorial methodology</a></footer></body></html>
+<BaseLayout title="Standing Desk Comparison Tool | GearPilot AI" description="A transparent, evidence-aware standing desk comparison tool for the US market. The current catalog is clearly labeled demonstration data.">
+  <span class="pill">US market · Demonstration catalog</span>
+  <h1>Choose home-office equipment with confidence.</h1>
+  <p class="muted">Filter standing desks by your workspace and see the documented reasons behind each result. Rankings never use affiliate commission rates.</p>
+  <section class="card" aria-labelledby="finder-title">
+    <h2 id="finder-title">Standing desk finder</h2>
+    <p><strong>Important:</strong> Every current result is synthetic demonstration data. It is not a real listing, review, price, or purchase recommendation.</p>
+    <form id="finder" class="finder">
+      <label>Budget (USD)<input name="budget" type="number" min="1" step="1" value="500" required /></label>
+      <label>Workspace<select name="workspace"><option value="compact">Compact (40 × 20 in minimum)</option><option value="standard" selected>Standard (48 × 24 in minimum)</option><option value="large">Large (60 × 30 in minimum)</option></select></label>
+      <label>Minimum width (in)<input name="width" type="number" min="1" step="1" value="48" required /></label>
+      <label>Minimum lift capacity (lb)<input name="capacity" type="number" min="1" step="1" value="150" required /></label>
+      <label>Lowest supported height (in)<input name="minHeight" type="number" min="1" step="0.1" value="28" /></label>
+      <label>Highest supported height (in)<input name="maxHeight" type="number" min="1" step="0.1" value="47" /></label>
+      <label>Priority<select name="preference"><option value="value" selected>Value</option><option value="quality">Quality</option><option value="workspace_fit">Workspace fit</option></select></label>
+      <label><input name="electric" type="checkbox" checked /> Require electric adjustment</label>
+      <button type="submit">Update results</button>
+    </form>
+  </section>
+  <section aria-labelledby="recommendations-title">
+    <h2 id="recommendations-title">Recommendations</h2>
+    <p id="result-summary" class="muted">Scores compare only the eligible demonstration records and are not ratings.</p>
+    <div id="recommendations" class="grid" aria-live="polite">
+      {results.length ? results.map((result, index) => {
+        const affiliateLink = getApprovedAffiliateLink(result.offer);
+        return <article class="card"><span class="pill">#{index + 1} · {result.score}/100</span><h3>{result.product.brand} {result.product.model}</h3><p>${(result.totalCents / 100).toFixed(2)} USD · {result.product.specifications?.desktopWidthInches} × {result.product.specifications?.desktopDepthInches} in desktop</p><h4>Why it matched</h4><ul>{result.explanation.map((reason) => <li>{reason}</li>)}</ul>{affiliateLink ? <a href={affiliateLink.href} rel={affiliateLink.rel} target="_blank">View approved retailer offer</a> : <p class="muted">No approved purchase link is available.</p>}</article>;
+      }) : <p class="card">No catalog entries match these requirements.</p>}
+    </div>
+  </section>
+  <section class="card" aria-labelledby="how-title"><h2 id="how-title">How this prototype works</h2><p>We filter for known total price, availability, desktop dimensions, height range, lift capacity, and your electric-adjustment requirement. Eligible items are then scored from those published comparison fields and their evidence status. Read the <a href="/methodology/">full methodology</a>.</p></section>
+</BaseLayout>
+
+<script>
+  import catalogData from '../data/demo.json';
+  import { CatalogSchema } from '../lib/schema';
+  import { recommend } from '../lib/recommend';
+  const catalog = CatalogSchema.parse(catalogData);
+  const form = document.querySelector<HTMLFormElement>('#finder');
+  const output = document.querySelector<HTMLDivElement>('#recommendations');
+  const summary = document.querySelector<HTMLParagraphElement>('#result-summary');
+  function numberValue(data: FormData, name: string): number | undefined { const value = data.get(name)?.toString().trim(); return value ? Number(value) : undefined; }
+  function resultCard(result: ReturnType<typeof recommend>[number], index: number): HTMLElement {
+    const card = document.createElement('article'); card.className = 'card';
+    const rank = document.createElement('span'); rank.className = 'pill'; rank.textContent = `#${index + 1} · ${result.score}/100`; card.append(rank);
+    const heading = document.createElement('h3'); heading.textContent = `${result.product.brand} ${result.product.model}`; card.append(heading);
+    const specs = result.product.specifications;
+    const detail = document.createElement('p'); detail.textContent = `$${(result.totalCents / 100).toFixed(2)} USD · ${specs?.desktopWidthInches} × ${specs?.desktopDepthInches} in desktop`; card.append(detail);
+    const why = document.createElement('h4'); why.textContent = 'Why it matched'; card.append(why);
+    const list = document.createElement('ul'); result.explanation.forEach((reason) => { const item = document.createElement('li'); item.textContent = reason; list.append(item); }); card.append(list);
+    const note = document.createElement('p'); note.className = 'muted'; note.textContent = 'No approved purchase link is available.'; card.append(note);
+    return card;
+  }
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault(); const data = new FormData(form);
+    const results = recommend(catalog.products, catalog.offers, { budgetCents: Math.round((numberValue(data, 'budget') ?? 0) * 100), minDesktopWidthInches: numberValue(data, 'width') ?? 0, targetMinHeightInches: numberValue(data, 'minHeight'), targetMaxHeightInches: numberValue(data, 'maxHeight'), minLiftCapacityLbs: numberValue(data, 'capacity'), electricRequired: data.get('electric') === 'on', workspace: (data.get('workspace')?.toString() ?? 'standard') as 'compact' | 'standard' | 'large', preference: (data.get('preference')?.toString() ?? 'value') as 'value' | 'quality' | 'workspace_fit', market: 'US' });
+    if (!output || !summary) return; output.replaceChildren();
+    if (!results.length) { const message = document.createElement('p'); message.className = 'card'; message.textContent = 'No catalog entries match these requirements.'; output.append(message); summary.textContent = 'No matching demonstration records.'; return; }
+    results.forEach((result, index) => output.append(resultCard(result, index))); summary.textContent = `${results.length} demonstration record${results.length === 1 ? '' : 's'} matched. Scores are comparisons, not ratings.`;
+  });
+</script>
