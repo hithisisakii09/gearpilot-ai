@@ -9,7 +9,8 @@
     "preview": "astro preview",
     "check": "astro check",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "catalog:check": "node scripts/validate-catalog.mjs --catalog src/data/candidates.json --dry-run"
   },
   "dependencies": {
     "astro": "^7.4.1",

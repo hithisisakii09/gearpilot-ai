@@ -27,7 +27,7 @@ This repository uses Cloudflare Workers static assets through `wrangler.jsonc`; 
 
 ## Product safety
 
-All initial catalog products and offers are fictional. Never represent synthetic products as real listings. Real merchant data requires approved usage rights, verified claims, suitable evidence, affiliate disclosures, valid program participation, and source URLs. See `docs/PRODUCT_DATA_ARCHITECTURE.md`, `docs/AFFILIATE_INTEGRATION_PLAN.md`, and `docs/PHASE2_RELEASE_CHECKLIST.md`.
+All initial public catalog products and offers are fictional. Never represent synthetic products as real listings. Phase 3 keeps real-product research candidates out of public recommendations until evidence is complete and fresh. Real merchant data requires approved usage rights, verified claims, suitable evidence, affiliate disclosures, valid program participation, and source URLs. See `docs/PRODUCT_DATA_ARCHITECTURE.md`, `docs/PHASE3_CATALOG_ARCHITECTURE.md`, `docs/PHASE3_SOURCE_REGISTER.md`, `docs/PHASE3_DATA_FRESHNESS_POLICY.md`, and `docs/PHASE3_RELEASE_CHECKLIST.md`.
 
 ## Next milestones
 
