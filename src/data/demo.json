@@ -1,0 +1,12 @@
+{
+  "products": [
+    {"id":"demo-a","brand":"Demo","model":"Desk A","category":"standing_desk","market":"US","isDemo":true,"electric":true,"widthInches":48,"minHeightInches":28,"maxHeightInches":47,"liftCapacityKg":70,"warrantyYears":3,"mechanicalScore":75,"usabilityScore":80,"featureScore":65,"evidenceScore":70,"evidence":[]},
+    {"id":"demo-b","brand":"Demo","model":"Desk B","category":"standing_desk","market":"US","isDemo":true,"electric":true,"widthInches":55,"minHeightInches":25,"maxHeightInches":50,"liftCapacityKg":100,"warrantyYears":5,"mechanicalScore":95,"usabilityScore":90,"featureScore":85,"evidenceScore":70,"evidence":[]},
+    {"id":"demo-c","brand":"Demo","model":"Desk C","category":"standing_desk","market":"US","isDemo":true,"electric":false,"widthInches":40,"minHeightInches":29,"maxHeightInches":44,"liftCapacityKg":45,"warrantyYears":1,"mechanicalScore":55,"usabilityScore":65,"featureScore":50,"evidenceScore":60,"evidence":[]}
+  ],
+  "offers": [
+    {"id":"offer-a","productId":"demo-a","merchant":"Fictional demo retailer","market":"US","currency":"USD","itemPriceCents":32900,"mandatoryShippingCents":0,"available":true,"lastVerifiedAt":"2026-10-28","approvedDataUse":true},
+    {"id":"offer-b","productId":"demo-b","merchant":"Fictional demo retailer","market":"US","currency":"USD","itemPriceCents":44900,"mandatoryShippingCents":0,"available":true,"lastVerifiedAt":"2026-10-28","approvedDataUse":true},
+    {"id":"offer-c","productId":"demo-c","merchant":"Fictional demo retailer","market":"US","currency":"USD","itemPriceCents":25900,"mandatoryShippingCents":0,"available":true,"lastVerifiedAt":"2026-10-28","approvedDataUse":true}
+  ]
+}

@@ -1,0 +1,15 @@
+---
+import '../styles/global.css';
+import demo from '../data/demo.json';
+import { ProductSchema, OfferSchema } from '../lib/schema';
+import { recommend } from '../lib/recommend';
+const products = demo.products.map(p=>ProductSchema.parse(p));
+const offers = demo.offers.map(o=>OfferSchema.parse(o));
+const results = recommend(products,offers,{budgetCents:50000,minWidthInches:48,electricRequired:true,preference:'value',market:'US'});
+---
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>GearPilot AI | Home Office Product Comparisons</title><meta name="description" content="Evidence-first comparison tools for US home office equipment. Demonstration catalog only."/></head>
+<body><header><nav><strong>GearPilot AI</strong><a href="/">Home</a><a href="/methodology/">Methodology</a><a href="/affiliate-disclosure/">Affiliate Disclosure</a><a href="/privacy/">Privacy</a><a href="/contact/">Contact</a></nav></header>
+<main><span class="pill">US market · Prototype</span><h1>Choose home-office equipment with confidence.</h1><p class="muted">Evidence-first comparisons with transparent scores and independent rankings.</p>
+<section class="card"><h2>Standing desk recommendations</h2><p><strong>Demo only:</strong> These are fictional desks and prices. No purchase links are available.</p><p>Filters: electric · 48-inch minimum width · $500 maximum · value priority.</p><div class="grid">{results.map((r,i)=><article class="card"><span class="pill">#{i+1} · {r.score}/100</span><h3>{r.product.model}</h3><p>${(r.totalCents/100).toFixed(2)} · {r.product.widthInches} inches</p><p>{r.explanation.join(' ')}</p><p class="muted">Synthetic data; not a real product review.</p></article>)}</div></section>
+<section><h2>Coming next</h2><div class="grid"><div class="card">Ergonomic chairs</div><div class="card">Monitor arms</div><div class="card">Docking stations</div></div></section></main>
+<footer>GearPilot AI is a prototype. <a href="/affiliate-disclosure/">Affiliate disclosure</a> · <a href="/methodology/">Editorial methodology</a></footer></body></html>
