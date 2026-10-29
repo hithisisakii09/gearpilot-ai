@@ -147,6 +147,8 @@ describe('human editorial decision workflow', () => {
       evidenceObservedAt: base.observedAt,
     })]);
     expect(decided.candidateAssessments).toEqual(collection.candidateAssessments);
+    expect(catalog.products.find((product) => product.id === base.productId)?.dataStatus).toBe('partially_verified');
+    expect(catalog.offers).toHaveLength(0);
     expect(() => applyEditorialDecision(decided, {
       observationId: base.id,
       decision: 'rejected',
