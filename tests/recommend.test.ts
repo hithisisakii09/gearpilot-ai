@@ -86,7 +86,7 @@ describe('recommendation eligibility and scores', () => {
     expect(large).toEqual([]);
   });
   it('is deterministic and ranking remains independent from affiliate status or URL', () => {
-    const approved = demoCatalog.offers.map((offer) => OfferSchema.parse(offer.id === 'demo-offer-a' ? { ...offer, affiliateProgramStatus: 'approved', affiliateUrl: 'https://merchant.example/approved-link' } : offer));
+    const approved = demoCatalog.offers.map((offer) => OfferSchema.parse(offer.id === 'demo-offer-a' ? { ...offer, affiliateProgramStatus: 'approved', affiliateProgramId: 'branch', affiliateUrl: 'https://merchant.example/approved-link' } : offer));
     const baseline = recommend(demoCatalog.products, demoCatalog.offers, criteria);
     expect(recommend(demoCatalog.products, approved, criteria).map((item) => [item.product.id, item.score])).toEqual(baseline.map((item) => [item.product.id, item.score]));
     expect(recommend(demoCatalog.products, demoCatalog.offers, criteria)).toEqual(baseline);
@@ -98,8 +98,8 @@ describe('affiliate safety and demo identification', () => {
     expect(getApprovedAffiliateLink(demoCatalog.offers[0]!)).toBeNull();
     expect(recommend(demoCatalog.products, demoCatalog.offers, criteria)[0]?.explanation.at(-1)).toMatch(/Synthetic demonstration/);
   });
-  it('returns sponsored attributes only for an in-stock approved destination', () => {
-    const approved = OfferSchema.parse({ ...demoCatalog.offers[0], affiliateProgramStatus: 'approved', affiliateUrl: 'https://merchant.example/approved-link' });
-    expect(getApprovedAffiliateLink(approved)).toEqual({ href: 'https://merchant.example/approved-link', rel: 'sponsored nofollow noopener noreferrer' });
+  it('does not allow legacy offer-only approval without registry proof', () => {
+    const approved = OfferSchema.parse({ ...demoCatalog.offers[0], affiliateProgramStatus: 'approved', affiliateProgramId: 'branch', affiliateUrl: 'https://merchant.example/approved-link' });
+    expect(getApprovedAffiliateLink(approved)).toBeNull();
   });
 });
