@@ -349,12 +349,10 @@ export const PolicyEvidenceSchema = z.object({
   validateIndependentReview(evidence, context);
 });
 
-export const CommercialObservationSchema = z.object({
+const ObservationEvidenceFields = {
   id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
   productId: z.string().min(1),
-  offerId: z.string().min(1),
   manufacturer: z.string().min(1),
-  merchant: z.string().min(1),
   collectedBy: z.string().trim().min(1).max(120).nullable().default(null),
   configuration: ProductConfigurationSchema,
   currency: z.literal('USD'),
@@ -366,8 +364,15 @@ export const CommercialObservationSchema = z.object({
   sourceUrl: HttpsUrlSchema,
   observedAt: TimestampSchema,
   ...EvidenceReviewFields,
-}).superRefine((observation, context) => {
-  validateReviewFields(observation, context);
+};
+
+function validateCommercialObservation(observation: {
+  shippingStatus: z.infer<typeof ShippingStatusSchema>;
+  mandatoryShippingCents: number | null;
+  collectedBy: string | null;
+  reviewStatus: z.infer<typeof EvidenceReviewStatusSchema>;
+  reviewer: string | null;
+}, context: z.RefinementCtx): void {
   const reviewed = observation.reviewStatus === 'approved' || observation.reviewStatus === 'rejected';
   if (reviewed && !observation.collectedBy) context.addIssue({ code: 'custom', path: ['collectedBy'], message: 'A named collector is required to establish independent review' });
   if (reviewed && observation.collectedBy?.toLowerCase() === observation.reviewer?.trim().toLowerCase()) {
@@ -376,7 +381,37 @@ export const CommercialObservationSchema = z.object({
   if (observation.shippingStatus === 'unknown' && observation.mandatoryShippingCents !== null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Unknown shipping must remain null' });
   if (observation.shippingStatus === 'free' && observation.mandatoryShippingCents !== 0) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Free shipping must be recorded as zero cents' });
   if (observation.shippingStatus === 'known' && observation.mandatoryShippingCents === null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Known shipping requires an amount' });
+}
+
+export const CommercialObservationSchema = z.object({
+  ...ObservationEvidenceFields,
+  observationType: z.literal('commercial').optional(),
+  offerId: z.string().min(1),
+  merchant: z.string().min(1),
+}).superRefine((observation, context) => {
+  validateReviewFields(observation, context);
+  validateIndependentReview(observation, context);
+  validateCommercialObservation(observation, context);
 });
+
+export const ManufacturerProductObservationSchema = z.object({
+  ...ObservationEvidenceFields,
+  observationType: z.literal('manufacturer_product'),
+  reviewStatus: EvidenceReviewStatusSchema.default('pending_review'),
+  reviewer: z.string().trim().min(1).max(120).nullable().default(null),
+  reviewedAt: TimestampSchema.nullable().default(null),
+}).strict().superRefine((observation, context) => {
+  validateReviewFields(observation, context);
+  validateIndependentReview(observation, context);
+  if (observation.sourceUrl !== observation.productUrl) {
+    context.addIssue({ code: 'custom', path: ['sourceUrl'], message: 'Manufacturer product observations must cite the same official product page as the product URL' });
+  }
+  if (observation.shippingStatus !== 'unknown' || observation.mandatoryShippingCents !== null) {
+    context.addIssue({ code: 'custom', path: ['shippingStatus'], message: 'Manufacturer-page shipping claims are not destination-verified commercial shipping evidence' });
+  }
+});
+
+export const ObservationSchema = z.union([ManufacturerProductObservationSchema, CommercialObservationSchema]);
 
 export const EditorialReviewDecisionSchema = z.enum(['approved', 'rejected']);
 
@@ -413,12 +448,12 @@ export const CandidateVerificationAssessmentSchema = z.object({
 
 export const ObservationCollectionSchema = z.object({
   lastUpdatedAt: TimestampSchema,
-  observations: z.array(CommercialObservationSchema),
+  observations: z.array(ObservationSchema),
   candidateAssessments: z.array(CandidateVerificationAssessmentSchema),
   reviewEvents: z.array(EditorialReviewEventSchema).default([]),
 }).superRefine((collection, context) => {
   const observationIds = new Set<string>();
-  const observationById = new Map<string, z.infer<typeof CommercialObservationSchema>>();
+  const observationById = new Map<string, z.infer<typeof ObservationSchema>>();
   collection.observations.forEach((observation, index) => {
     if (observationIds.has(observation.id)) context.addIssue({ code: 'custom', path: ['observations', index, 'id'], message: 'Observation IDs must be unique' });
     observationIds.add(observation.id);
@@ -521,6 +556,8 @@ export type Catalog = z.infer<typeof CatalogSchema>;
 export type AffiliateProgram = z.infer<typeof AffiliateProgramSchema>;
 export type AffiliateRegistry = z.infer<typeof AffiliateRegistrySchema>;
 export type CommercialObservation = z.infer<typeof CommercialObservationSchema>;
+export type ManufacturerProductObservation = z.infer<typeof ManufacturerProductObservationSchema>;
+export type Observation = z.infer<typeof ObservationSchema>;
 export type EditorialReviewEvent = z.infer<typeof EditorialReviewEventSchema>;
 export type EditorialReviewDecision = z.infer<typeof EditorialReviewDecisionSchema>;
 export type ObservationCollection = z.infer<typeof ObservationCollectionSchema>;

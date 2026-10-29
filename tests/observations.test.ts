@@ -3,8 +3,8 @@ import candidates from '../src/data/candidates.json';
 import observationsData from '../src/data/observations.json';
 import registryData from '../src/data/affiliate-programs.json';
 import { PRICE_FRESHNESS_MS, timestampIsFresh } from '../src/lib/eligibility';
-import { applyEditorialDecision, createCatalogQualityReport, findConflictingObservations, findDuplicateObservations, prepareObservationIngestion, validateObservationReferences } from '../src/lib/observations';
-import { AffiliateRegistrySchema, CatalogSchema, CommercialObservationSchema, EditorialReviewEventSchema, ObservationCollectionSchema } from '../src/lib/schema';
+import { applyEditorialDecision, createCatalogQualityReport, findConflictingObservations, findDuplicateObservations, isCommercialObservation, prepareObservationIngestion, validateObservationReferences } from '../src/lib/observations';
+import { AffiliateRegistrySchema, CatalogSchema, CommercialObservationSchema, EditorialReviewEventSchema, ManufacturerProductObservationSchema, ObservationCollectionSchema } from '../src/lib/schema';
 
 const catalog = CatalogSchema.parse(candidates);
 const collection = ObservationCollectionSchema.parse(observationsData);
@@ -15,14 +15,199 @@ const collectedCollection = ObservationCollectionSchema.parse({
   ...collection,
   observations: collection.observations.map((observation) => ({ ...observation, collectedBy: 'Evidence collector' })),
 });
+const branchProduct = catalog.products.find((product) => product.id === 'branch-duo-standing-desk')!;
+const branchConfiguration = {
+  id: 'branch-duo-36x24-woodgrain-white',
+  label: '36x24 desktop, Woodgrain top, White legs',
+  exactModel: 'Duo Standing Desk',
+  sku: null,
+  desktopWidthInches: 36,
+  desktopDepthInches: 24,
+  selectedOptions: { desktopSize: '36x24', top: 'Woodgrain', legColor: 'White', accessories: 'None' },
+};
+const manufacturerObservation = ManufacturerProductObservationSchema.parse({
+  id: 'branch-duo-36x24-woodgrain-white-20261029',
+  observationType: 'manufacturer_product',
+  productId: branchProduct.id,
+  manufacturer: 'Branch',
+  collectedBy: 'akhil',
+  configuration: branchConfiguration,
+  currency: 'USD',
+  priceCents: 54900,
+  mandatoryShippingCents: null,
+  shippingStatus: 'unknown',
+  availability: 'in_stock',
+  productUrl: branchProduct.officialManufacturerUrl,
+  sourceUrl: branchProduct.officialManufacturerUrl,
+  observedAt: '2026-10-29T17:12:00Z',
+  evidenceNotes: 'Test fixture based on owner-supplied manufacturer-page claims; not checkout-confirmed.',
+  evidenceQuality: 'primary',
+  reviewStatus: 'pending_review',
+  reviewer: null,
+  reviewedAt: null,
+  rejectionReason: null,
+  sourceMetadata: { sourceType: 'manufacturer_product_page', testFixture: true },
+});
+const branchAssessment = {
+  ...collection.candidateAssessments.find((assessment) => assessment.productId === branchProduct.id)!,
+  exactConfiguration: branchConfiguration,
+  assessedAt: '2026-10-29T17:12:00Z',
+  priceStatus: 'observed' as const,
+  shippingStatus: 'unknown' as const,
+  availability: 'in_stock' as const,
+  missingEvidence: ['mandatory_shipping', 'human_review'] as const,
+  notes: 'Test-only exact variant fixture; shipping destination and cart state are not confirmed.',
+};
 
 describe('commercial observation contracts', () => {
   it('accepts exact, primary-source USD observations without auto-approving them', () => {
     expect(base.priceCents).toBe(36999);
     expect(base.configuration.selectedOptions.sku).toBe('401512');
     expect(base.reviewStatus).toBe('pending_review');
+    expect(collection.observations).toHaveLength(2);
+    expect(collection.observations.every(isCommercialObservation)).toBe(true);
   });
+});
 
+describe('manufacturer-only observation contracts', () => {
+    it('accepts a source-backed manufacturer page observation without a commercial offer', () => {
+      expect(manufacturerObservation).toMatchObject({
+        observationType: 'manufacturer_product',
+        productId: branchProduct.id,
+        priceCents: 54900,
+        shippingStatus: 'unknown',
+        mandatoryShippingCents: null,
+        reviewStatus: 'pending_review',
+        reviewer: null,
+        configuration: { id: 'branch-duo-36x24-woodgrain-white', sku: null },
+      });
+      expect(isCommercialObservation(manufacturerObservation)).toBe(false);
+      expect(() => ManufacturerProductObservationSchema.parse({
+        ...manufacturerObservation,
+        offerId: 'invented-offer',
+        merchant: 'Branch',
+      })).toThrow();
+      expect(() => ObservationCollectionSchema.parse({
+        lastUpdatedAt: manufacturerObservation.observedAt,
+        observations: [{ ...manufacturerObservation, offerId: 'invented-offer', merchant: 'Branch' }],
+        candidateAssessments: [],
+        reviewEvents: [],
+      })).toThrow();
+      expect(() => CommercialObservationSchema.parse({
+        ...manufacturerObservation,
+        observationType: undefined,
+        merchant: 'Branch',
+      })).toThrow();
+      const defaultPending = ManufacturerProductObservationSchema.parse({
+        ...manufacturerObservation,
+        reviewStatus: undefined,
+        reviewer: undefined,
+        reviewedAt: undefined,
+      });
+      expect(defaultPending).toMatchObject({
+        reviewStatus: 'pending_review',
+        reviewer: null,
+        reviewedAt: null,
+      });
+    });
+
+    it('requires an exact assessment, official source, and matching product configuration for intake', () => {
+      const incoming = ObservationCollectionSchema.parse({
+        lastUpdatedAt: '2026-10-29T17:20:00.000Z',
+        observations: [manufacturerObservation],
+        candidateAssessments: [branchAssessment],
+        reviewEvents: [],
+      });
+      const merged = prepareObservationIngestion(
+        collection,
+        incoming,
+        catalog.products,
+        'akhil',
+        '2026-10-29T17:20:00.000Z',
+        new Date('2026-10-29T17:20:00Z'),
+      );
+      expect(merged.observations.at(-1)).toMatchObject({ reviewStatus: 'pending_review', reviewer: null });
+      expect(merged.candidateAssessments.find((assessment) => assessment.productId === branchProduct.id)?.exactConfiguration).toEqual(branchConfiguration);
+      const withoutBranchAssessment = ObservationCollectionSchema.parse({
+        ...collection,
+        candidateAssessments: collection.candidateAssessments.filter((assessment) => assessment.productId !== branchProduct.id),
+      });
+      expect(() => prepareObservationIngestion(withoutBranchAssessment, ObservationCollectionSchema.parse({
+        ...incoming,
+        candidateAssessments: [],
+      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow(/requires an exact candidate assessment/);
+      expect(() => prepareObservationIngestion(collection, ObservationCollectionSchema.parse({
+        ...incoming,
+        observations: [{ ...manufacturerObservation, configuration: { ...branchConfiguration, desktopWidthInches: 48 } }],
+      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow(/assessed exact configuration/);
+      expect(() => prepareObservationIngestion(collection, ObservationCollectionSchema.parse({
+        ...incoming,
+        observations: [{ ...manufacturerObservation, sourceUrl: 'https://example.com/product' }],
+      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow();
+      expect(() => prepareObservationIngestion(collection, ObservationCollectionSchema.parse({
+        ...incoming,
+        candidateAssessments: [{
+          ...branchAssessment,
+          sourceUrls: ['https://example.com/product'],
+        }],
+      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow(/candidate assessment must cite/);
+    });
+
+    it('isolates manufacturer duplicates and conflicts from commercial freshness and offer eligibility', () => {
+      const duplicateManufacturer = { ...manufacturerObservation, id: 'branch-duo-manufacturer-duplicate' };
+      const conflictingManufacturer = { ...manufacturerObservation, id: 'branch-duo-manufacturer-conflict', priceCents: 55000 };
+      const sameIdDifferentVariant = {
+        ...manufacturerObservation,
+        id: 'branch-duo-manufacturer-variant-conflict',
+        configuration: { ...branchConfiguration, selectedOptions: { ...branchConfiguration.selectedOptions, top: 'Oak' } },
+      };
+      expect(findDuplicateObservations([manufacturerObservation, duplicateManufacturer])).toHaveLength(1);
+      expect(findConflictingObservations([manufacturerObservation, conflictingManufacturer])).toHaveLength(1);
+      expect(findConflictingObservations([manufacturerObservation, sameIdDifferentVariant])).toHaveLength(1);
+      const withManufacturerEvidence = ObservationCollectionSchema.parse({
+        ...collection,
+        observations: [...collection.observations, manufacturerObservation],
+      });
+      expect(findDuplicateObservations(withManufacturerEvidence.observations)).toEqual([]);
+      expect(findConflictingObservations(withManufacturerEvidence.observations)).toEqual([]);
+      expect(createCatalogQualityReport(catalog, withManufacturerEvidence, registry.programs, now)).toMatchObject({
+        eligibleOffers: 0,
+        freshPriceObservations: 2,
+        freshStockObservations: 2,
+        missingShippingEvidence: 8,
+        conflictingObservations: 0,
+        duplicateObservations: 0,
+      });
+      expect(catalog.offers).toHaveLength(0);
+    });
+
+    it('supports independent evidence review without automatically verifying a product', () => {
+      const pending = ObservationCollectionSchema.parse({
+        lastUpdatedAt: '2026-10-29T17:20:00.000Z',
+        observations: [manufacturerObservation],
+        candidateAssessments: [branchAssessment],
+        reviewEvents: [],
+      });
+      const reviewed = applyEditorialDecision(pending, {
+        observationId: manufacturerObservation.id,
+        decision: 'approved',
+        reviewer: 'Independent editorial reviewer',
+        reviewedAt: '2026-10-29T18:00:00.000Z',
+      }, new Date('2026-10-29T18:00:00.000Z'));
+      expect(reviewed.observations[0]).toMatchObject({ reviewStatus: 'approved', reviewer: 'Independent editorial reviewer' });
+      expect(reviewed.reviewEvents).toHaveLength(1);
+      expect(branchProduct.dataStatus).toBe('partially_verified');
+      expect(catalog.offers).toHaveLength(0);
+      expect(() => applyEditorialDecision(pending, {
+        observationId: manufacturerObservation.id,
+        decision: 'approved',
+        reviewer: 'akhil',
+        reviewedAt: '2026-10-29T18:00:00.000Z',
+      }, new Date('2026-10-29T18:00:00.000Z'))).toThrow(/different from the evidence collector/);
+    });
+});
+
+describe('commercial observation contracts', () => {
   it('rejects negative or malformed prices and unsupported currency', () => {
     expect(() => CommercialObservationSchema.parse({ ...base, priceCents: -1 })).toThrow();
     expect(() => CommercialObservationSchema.parse({ ...base, priceCents: 12.5 })).toThrow();
