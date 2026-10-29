@@ -7,12 +7,15 @@ export const SPECIFICATION_REVIEW_MS = 180 * 24 * 60 * 60 * 1000;
 
 export type EvidenceIssueCode =
   | 'missing_product_verification' | 'missing_offer_verification' | 'missing_product_sources' | 'missing_configuration'
+  | 'missing_product_editorial_approval' | 'unverified_product_identity' | 'unverified_product_specification'
   | 'missing_price' | 'missing_price_observation' | 'missing_shipping' | 'missing_stock_observation'
+  | 'missing_warranty_evidence' | 'unreviewed_warranty_evidence' | 'invalid_warranty_evidence'
+  | 'missing_return_policy_evidence' | 'unreviewed_return_policy_evidence' | 'invalid_return_policy_evidence'
   | 'invalid_price_observation' | 'invalid_stock_observation' | 'unreviewed_price_observation' | 'unreviewed_stock_observation'
   | 'stale_price' | 'stale_shipping' | 'stale_stock' | 'future_price_observation' | 'future_stock_observation'
   | 'conflicting_price_observations' | 'conflicting_stock_observations';
 
-export type EvidenceIssue = { code: EvidenceIssueCode; field: 'product' | 'configuration' | 'price' | 'shipping' | 'stock'; message: string };
+export type EvidenceIssue = { code: EvidenceIssueCode; field: 'product' | 'configuration' | 'price' | 'shipping' | 'stock' | 'warranty' | 'returns'; message: string };
 
 function parsedTimestamp(timestamp: unknown): number | null {
   if (typeof timestamp !== 'string') return null;
@@ -62,12 +65,52 @@ function hasConflictingStockObservations(offer: Offer): boolean {
   return new Set(relevant.map((item) => item.availability)).size > 1;
 }
 
+function policyEvidenceIsIndependentlyApproved(evidence: NonNullable<Offer['warrantyEvidence']>, configurationId: string, now: Date): boolean {
+  const observedAt = parsedTimestamp(evidence.observedAt);
+  const reviewedAt = parsedTimestamp(evidence.reviewedAt);
+  return evidence.configurationId === configurationId
+    && evidence.reviewStatus === 'approved'
+    && evidence.evidenceQuality !== 'unverified'
+    && evidence.collectedBy !== null
+    && evidence.reviewer !== null
+    && evidence.collectedBy.trim().toLowerCase() !== evidence.reviewer.trim().toLowerCase()
+    && observedAt !== null
+    && reviewedAt !== null
+    && reviewedAt >= observedAt
+    && reviewedAt <= now.getTime()
+    && evidence.sourceUrl.startsWith('https://');
+}
+
 export function getOfferEvidenceIssues(product: Product, offer: Offer, now = new Date()): EvidenceIssue[] {
   const issues: EvidenceIssue[] = [];
   if (product.dataStatus !== 'verified') issues.push({ code: 'missing_product_verification', field: 'product', message: 'Product is not verified.' });
   if (offer.dataStatus !== 'verified') issues.push({ code: 'missing_offer_verification', field: 'product', message: 'Offer is not verified.' });
   if (!Array.isArray(product.sources) || product.sources.length === 0) issues.push({ code: 'missing_product_sources', field: 'product', message: 'Product source provenance is missing.' });
+  if (!product.editorialApproval) issues.push({ code: 'missing_product_editorial_approval', field: 'product', message: 'Independent product editorial approval is missing.' });
+  else if (product.editorialApproval.collector.trim().toLowerCase() === product.editorialApproval.reviewer.trim().toLowerCase()
+    || !product.editorialApproval.sourceIds.length
+    || product.editorialApproval.sourceIds.some((sourceId) => !product.sources.some((source) => source.id === sourceId))
+    || parsedTimestamp(product.editorialApproval.reviewedAt) === null
+    || Date.parse(product.editorialApproval.reviewedAt) > now.getTime()) {
+    issues.push({ code: 'missing_product_editorial_approval', field: 'product', message: 'Product editorial approval is invalid or does not reference its evidence.' });
+  }
+  if (product.specificationReferences.identity?.status !== 'verified') {
+    issues.push({ code: 'unverified_product_identity', field: 'product', message: 'Product identity lacks independently verified source provenance.' });
+  }
+  if (Object.keys(product.specifications ?? {}).some((key) => product.specificationReferences[key]?.status !== 'verified')) {
+    issues.push({ code: 'unverified_product_specification', field: 'product', message: 'One or more published product specifications lack independently verified source provenance.' });
+  }
   if (!offer.configurationId) issues.push({ code: 'missing_configuration', field: 'configuration', message: 'Offer is not tied to an exact configuration.' });
+  if (!offer.warrantyEvidence) issues.push({ code: 'missing_warranty_evidence', field: 'warranty', message: 'Configuration-specific warranty evidence is missing.' });
+  else if (offer.warrantyEvidence.reviewStatus !== 'approved') issues.push({ code: 'unreviewed_warranty_evidence', field: 'warranty', message: 'Warranty evidence lacks independent human approval.' });
+  else if (!offer.configurationId || !policyEvidenceIsIndependentlyApproved(offer.warrantyEvidence, offer.configurationId, now)) {
+    issues.push({ code: 'invalid_warranty_evidence', field: 'warranty', message: 'Warranty evidence is invalid or does not match the exact configuration.' });
+  }
+  if (!offer.returnPolicyEvidence) issues.push({ code: 'missing_return_policy_evidence', field: 'returns', message: 'Configuration-specific return-policy evidence is missing.' });
+  else if (offer.returnPolicyEvidence.reviewStatus !== 'approved') issues.push({ code: 'unreviewed_return_policy_evidence', field: 'returns', message: 'Return-policy evidence lacks independent human approval.' });
+  else if (!offer.configurationId || !policyEvidenceIsIndependentlyApproved(offer.returnPolicyEvidence, offer.configurationId, now)) {
+    issues.push({ code: 'invalid_return_policy_evidence', field: 'returns', message: 'Return-policy evidence is invalid or does not match the exact configuration.' });
+  }
   if (!Number.isInteger(offer.priceCents) || offer.priceCents! < 0) issues.push({ code: 'missing_price', field: 'price', message: 'A non-negative USD price is required.' });
   if (!Number.isInteger(offer.mandatoryShippingCents) || offer.mandatoryShippingCents! < 0) issues.push({ code: 'missing_shipping', field: 'shipping', message: 'Mandatory shipping must be known; unknown is not free.' });
 

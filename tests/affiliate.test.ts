@@ -7,13 +7,19 @@ import { AffiliateProgramSchema, AffiliateRegistrySchema, OfferSchema, ProductSc
 
 const now = new Date('2026-10-29T00:00:00Z');
 const configurationId = 'branch-duo-48x24-test';
-const reviewEvidence = { evidenceNotes: 'Approved test fixture.', evidenceQuality: 'primary' as const, reviewStatus: 'approved' as const, reviewer: 'Test reviewer', reviewedAt: now.toISOString(), sourceMetadata: {} };
+const reviewEvidence = { evidenceNotes: 'Approved test fixture.', evidenceQuality: 'primary' as const, reviewStatus: 'approved' as const, collectedBy: 'Evidence collector', reviewer: 'Test reviewer', reviewedAt: now.toISOString(), sourceMetadata: {} };
 const registry = AffiliateRegistrySchema.parse(registryData);
-const verifiedProduct = ProductSchema.parse({ ...candidates.products[0], dataStatus: 'verified' });
+const verifiedProduct = ProductSchema.parse({
+  ...candidates.products[0],
+  dataStatus: 'verified',
+  specificationReferences: Object.fromEntries(Object.entries(candidates.products[0]!.specificationReferences).map(([key, reference]) => [key, { ...reference, status: 'verified' }])),
+  editorialApproval: { collector: 'Product evidence collector', reviewer: 'Independent product reviewer', reviewedAt: now.toISOString(), sourceIds: candidates.products[0]!.sources.map((source) => source.id) },
+});
 const priceObservation = (overrides: Record<string, unknown> = {}) => ({ configurationId, priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), mandatoryShippingCents: 0, shippingStatus: 'free', ...reviewEvidence, ...overrides });
 const availabilityObservation = (overrides: Record<string, unknown> = {}) => ({ configurationId, availability: 'in_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), ...reviewEvidence, ...overrides });
+const policyEvidence = () => ({ configurationId, sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), ...reviewEvidence });
 const verifiedOffer = (overrides: Record<string, unknown> = {}) => OfferSchema.parse({
-  id: 'branch-duo-affiliate', productId: verifiedProduct.id, retailer: 'Branch', configurationId, market: 'US', dataStatus: 'verified', currency: 'USD', priceCents: 49900, mandatoryShippingCents: 0, priceVerifiedAt: now.toISOString(), priceObservations: [priceObservation()], availability: 'in_stock', availabilityObservedAt: now.toISOString(), availabilityObservations: [availabilityObservation()], affiliateProgramStatus: 'approved', affiliateProgramId: 'branch', affiliateUrl: 'https://shop.branchfurniture.com/products/duo', sourceUrls: ['https://www.branchfurniture.com/products/duo-standing-desk'], reviewNotes: null, lastUpdatedAt: now.toISOString(), ...overrides,
+  id: 'branch-duo-affiliate', productId: verifiedProduct.id, retailer: 'Branch', configurationId, market: 'US', dataStatus: 'verified', currency: 'USD', priceCents: 49900, mandatoryShippingCents: 0, priceVerifiedAt: now.toISOString(), priceObservations: [priceObservation()], availability: 'in_stock', availabilityObservedAt: now.toISOString(), availabilityObservations: [availabilityObservation()], warrantyEvidence: policyEvidence(), returnPolicyEvidence: policyEvidence(), affiliateProgramStatus: 'approved', affiliateProgramId: 'branch', affiliateUrl: 'https://shop.branchfurniture.com/products/duo', sourceUrls: ['https://www.branchfurniture.com/products/duo-standing-desk'], reviewNotes: null, lastUpdatedAt: now.toISOString(), ...overrides,
 });
 const approvedProgram = (overrides: Record<string, unknown> = {}) => AffiliateProgramSchema.parse({
   id: 'branch', merchantName: 'Branch', officialWebsite: 'https://www.branchfurniture.com/', applicationUrl: null, programName: 'Branch partner program', networkName: null, allowedRegions: ['US'], approvedDestinationDomains: ['branchfurniture.com'], approvalEvidence: { reference: 'credential-ref:affiliate/branch/approval-record', reviewedAt: '2026-10-29T00:00:00Z' }, approvalDate: '2026-10-29T00:00:00Z', trackingIdReference: 'credential-ref:affiliate/branch/tracking-id', status: 'approved', expiresAt: null, reviewNotes: 'Test fixture only; no real approval is asserted.', lastReviewedAt: '2026-10-29T00:00:00Z', ...overrides,
@@ -63,6 +69,18 @@ describe('affiliate registry and resolver', () => {
     const program = approvedProgram();
     expect(resolveAffiliateLink({ ...verifiedProduct, dataStatus: 'demo' }, verifiedOffer(), [program], now)).toBeNull();
     expect(resolveAffiliateLink(verifiedProduct, verifiedOffer({ dataStatus: 'partially_verified' }), [program], now)).toBeNull();
+  });
+  it('blocks affiliate links when policy evidence or independent product approval is absent', () => {
+    const productWithoutReview = { ...verifiedProduct, editorialApproval: null };
+    expect(resolveAffiliateLink(productWithoutReview, verifiedOffer(), [approvedProgram()], now)).toBeNull();
+
+    const offerWithoutWarranty = verifiedOffer();
+    Object.assign(offerWithoutWarranty, { warrantyEvidence: null });
+    expect(resolveAffiliateLink(verifiedProduct, offerWithoutWarranty, [approvedProgram()], now)).toBeNull();
+
+    const offerWithUnreviewedReturns = verifiedOffer();
+    Object.assign(offerWithUnreviewedReturns, { returnPolicyEvidence: { ...offerWithUnreviewedReturns.returnPolicyEvidence!, reviewStatus: 'pending_review', reviewer: null, reviewedAt: null } });
+    expect(resolveAffiliateLink(verifiedProduct, offerWithUnreviewedReturns, [approvedProgram()], now)).toBeNull();
   });
   it.each([
     ['missing price observation', { priceObservations: [] }],

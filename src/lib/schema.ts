@@ -134,6 +134,17 @@ export const SpecificationReferenceSchema = z.object({
   note: z.string().min(1).optional(),
 });
 
+export const ProductEditorialApprovalSchema = z.object({
+  collector: z.string().trim().min(1).max(120),
+  reviewer: z.string().trim().min(1).max(120),
+  reviewedAt: TimestampSchema,
+  sourceIds: z.array(z.string().min(1)).min(1),
+}).superRefine((approval, context) => {
+  if (approval.collector.toLowerCase() === approval.reviewer.toLowerCase()) {
+    context.addIssue({ code: 'custom', path: ['reviewer'], message: 'Product reviewer must be independent from the evidence collector' });
+  }
+});
+
 export const ProductImageSchema = z.object({
   url: z.url(),
   attribution: z.string().min(1),
@@ -177,6 +188,7 @@ export const ProductSchema = z.object({
   shippingInformation: z.string().min(1).nullable().default(null),
   sourceUrls: z.array(z.url()).default([]),
   sources: z.array(SourceSchema).default([]),
+  editorialApproval: ProductEditorialApprovalSchema.nullable().default(null),
   reviewNotes: z.string().min(1).nullable().default(null),
   lastUpdatedAt: TimestampSchema,
 }).superRefine((product, context) => {
@@ -189,16 +201,51 @@ export const ProductSchema = z.object({
     if (!sourceIds.has(reference.sourceId)) context.addIssue({ code: 'custom', path: ['specificationReferences', key, 'sourceId'], message: 'Specification reference must point to a product source' });
   });
   if (product.image && !sourceIds.has(product.image.sourceId)) context.addIssue({ code: 'custom', path: ['image', 'sourceId'], message: 'Image source must point to a product source' });
+  product.editorialApproval?.sourceIds.forEach((sourceId, index) => {
+    if (!sourceIds.has(sourceId)) context.addIssue({ code: 'custom', path: ['editorialApproval', 'sourceIds', index], message: 'Product approval must reference a product source' });
+  });
+  if (product.editorialApproval) {
+    if (new Set(product.editorialApproval.sourceIds).size !== product.editorialApproval.sourceIds.length) {
+      context.addIssue({ code: 'custom', path: ['editorialApproval', 'sourceIds'], message: 'Product approval source IDs must be unique' });
+    }
+    const latestEvidenceAt = Math.max(...product.editorialApproval.sourceIds.map((sourceId) => {
+      const source = product.sources.find((candidate) => candidate.id === sourceId);
+      return source ? Date.parse(source.observedAt) : Number.NEGATIVE_INFINITY;
+    }));
+    if (Date.parse(product.editorialApproval.reviewedAt) < latestEvidenceAt) {
+      context.addIssue({ code: 'custom', path: ['editorialApproval', 'reviewedAt'], message: 'Product approval cannot predate its cited evidence' });
+    }
+  }
   if (product.dataStatus === 'verified') {
     if (!product.officialManufacturerUrl) context.addIssue({ code: 'custom', path: ['officialManufacturerUrl'], message: 'Verified products require an official manufacturer URL' });
     if (product.sources.length === 0) context.addIssue({ code: 'custom', path: ['sources'], message: 'Verified products require at least one source' });
     if (!product.specificationReferences.identity) context.addIssue({ code: 'custom', path: ['specificationReferences', 'identity'], message: 'Verified products require identity provenance' });
+    else if (product.specificationReferences.identity.status !== 'verified') context.addIssue({ code: 'custom', path: ['specificationReferences', 'identity', 'status'], message: 'Verified products require independently verified identity evidence' });
+    if (!product.editorialApproval) context.addIssue({ code: 'custom', path: ['editorialApproval'], message: 'Verified products require independent editorial approval' });
     documentedSpecificationKeys.forEach((key) => {
       const value = product.specifications?.[key];
       if (value !== undefined && !product.specificationReferences[key]) context.addIssue({ code: 'custom', path: ['specificationReferences', key], message: `Documented ${key} requires a specification reference` });
+      else if (value !== undefined && product.specificationReferences[key]?.status !== 'verified') context.addIssue({ code: 'custom', path: ['specificationReferences', key, 'status'], message: `Verified products require independently verified ${key} evidence` });
     });
   }
 });
+
+function validateIndependentReview(record: {
+  collectedBy: string | null;
+  reviewStatus: z.infer<typeof EvidenceReviewStatusSchema>;
+  reviewer: string | null;
+  reviewedAt: string | null;
+  observedAt: string;
+}, context: z.RefinementCtx): void {
+  const reviewed = record.reviewStatus === 'approved' || record.reviewStatus === 'rejected';
+  if (reviewed && !record.collectedBy) context.addIssue({ code: 'custom', path: ['collectedBy'], message: 'Reviewed evidence requires a named collector' });
+  if (reviewed && record.collectedBy?.toLowerCase() === record.reviewer?.trim().toLowerCase()) {
+    context.addIssue({ code: 'custom', path: ['reviewer'], message: 'The reviewer must be independent from the evidence collector' });
+  }
+  if (record.reviewedAt && Date.parse(record.reviewedAt) < Date.parse(record.observedAt)) {
+    context.addIssue({ code: 'custom', path: ['reviewedAt'], message: 'Review cannot predate the evidence' });
+  }
+}
 
 export const PriceObservationSchema = z.object({
   configurationId: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
@@ -207,11 +254,13 @@ export const PriceObservationSchema = z.object({
   seller: z.string().min(1),
   sourceUrl: HttpsUrlSchema,
   observedAt: TimestampSchema,
+  collectedBy: z.string().trim().min(1).max(120).nullable().default(null),
   mandatoryShippingCents: z.number().int().nonnegative().nullable(),
   shippingStatus: ShippingStatusSchema,
   ...EvidenceReviewFields,
 }).superRefine((observation, context) => {
   validateReviewFields(observation, context);
+  validateIndependentReview(observation, context);
   if (observation.shippingStatus === 'unknown' && observation.mandatoryShippingCents !== null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Unknown shipping must remain null' });
   if (observation.shippingStatus === 'free' && observation.mandatoryShippingCents !== 0) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Free shipping must be recorded as zero cents' });
   if (observation.shippingStatus === 'known' && observation.mandatoryShippingCents === null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Known shipping requires an amount' });
@@ -222,8 +271,23 @@ export const AvailabilityObservationSchema = z.object({
   availability: AvailabilitySchema,
   sourceUrl: HttpsUrlSchema,
   observedAt: TimestampSchema,
+  collectedBy: z.string().trim().min(1).max(120).nullable().default(null),
   ...EvidenceReviewFields,
-}).superRefine((observation, context) => validateReviewFields(observation, context));
+}).superRefine((observation, context) => {
+  validateReviewFields(observation, context);
+  validateIndependentReview(observation, context);
+});
+
+export const PolicyEvidenceSchema = z.object({
+  configurationId: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
+  sourceUrl: HttpsUrlSchema,
+  observedAt: TimestampSchema,
+  collectedBy: z.string().trim().min(1).max(120).nullable().default(null),
+  ...EvidenceReviewFields,
+}).superRefine((evidence, context) => {
+  validateReviewFields(evidence, context);
+  validateIndependentReview(evidence, context);
+});
 
 export const CommercialObservationSchema = z.object({
   id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
@@ -343,6 +407,8 @@ export const OfferSchema = z.object({
   availability: AvailabilitySchema,
   availabilityObservedAt: TimestampSchema.nullable().default(null),
   availabilityObservations: z.array(AvailabilityObservationSchema).default([]),
+  warrantyEvidence: PolicyEvidenceSchema.nullable().default(null),
+  returnPolicyEvidence: PolicyEvidenceSchema.nullable().default(null),
   affiliateProgramStatus: AffiliateProgramStatusSchema,
   affiliateProgramId: z.string().min(1).optional(),
   affiliateUrl: z.url().optional(),
@@ -358,6 +424,15 @@ export const OfferSchema = z.object({
   if (offer.availability !== 'unknown' && !offer.availabilityObservedAt && offer.dataStatus !== 'demo') context.addIssue({ code: 'custom', path: ['availabilityObservedAt'], message: 'Known availability requires an observation timestamp' });
   if (offer.dataStatus === 'verified' && offer.sourceUrls.length === 0 && offer.priceObservations.length === 0 && offer.availabilityObservations.length === 0) context.addIssue({ code: 'custom', message: 'Verified offers require source evidence' });
   if (offer.dataStatus === 'verified' && !offer.configurationId) context.addIssue({ code: 'custom', path: ['configurationId'], message: 'Verified offers require an exact configuration ID' });
+  if (offer.dataStatus === 'verified') {
+    for (const [field, evidence] of [['warrantyEvidence', offer.warrantyEvidence], ['returnPolicyEvidence', offer.returnPolicyEvidence]] as const) {
+      if (!evidence) context.addIssue({ code: 'custom', path: [field], message: `Verified offers require reviewed ${field === 'warrantyEvidence' ? 'warranty' : 'return-policy'} evidence` });
+      else {
+        if (evidence.configurationId !== offer.configurationId) context.addIssue({ code: 'custom', path: [field, 'configurationId'], message: 'Policy evidence must match the exact offer configuration' });
+        if (evidence.reviewStatus !== 'approved') context.addIssue({ code: 'custom', path: [field, 'reviewStatus'], message: 'Verified offers require independently approved policy evidence' });
+      }
+    }
+  }
 });
 
 export const CatalogSchema = z.object({
