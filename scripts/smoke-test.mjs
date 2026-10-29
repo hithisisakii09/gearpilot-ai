@@ -31,7 +31,7 @@ if (!address || typeof address === 'string') throw new Error('Unable to start sm
 const origin = `http://127.0.0.1:${address.port}`;
 const canonicalOrigin = 'https://gearpilot-ai.hithisisakii09.workers.dev';
 const browser = await chromium.launch({ headless: true });
-const pageRoutes = ['/', '/methodology/', '/affiliate-disclosure/', '/privacy/', '/contact/', '/guides/standing-desk-fit/'];
+const pageRoutes = ['/', '/about/', '/methodology/', '/affiliate-disclosure/', '/privacy/', '/contact/', '/guides/standing-desk-fit/'];
 const utilityRoutes = ['/robots.txt', '/sitemap.xml'];
 const results = [];
 const forbiddenSchemaTypes = new Set(['Organization', 'Product', 'Offer', 'AggregateRating', 'Review', 'FAQPage']);
