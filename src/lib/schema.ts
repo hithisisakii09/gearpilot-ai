@@ -38,17 +38,20 @@ const EvidenceReviewFields = {
   evidenceNotes: z.string().min(1).max(1000),
   evidenceQuality: EvidenceQualitySchema,
   reviewStatus: EvidenceReviewStatusSchema,
-  reviewer: z.string().min(1).max(120).nullable(),
+  reviewer: z.string().trim().min(1).max(120).nullable(),
   reviewedAt: TimestampSchema.nullable(),
+  rejectionReason: z.string().trim().min(1).max(1000).nullable().default(null),
   sourceMetadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).default({}),
 };
 
-function validateReviewFields(record: { evidenceQuality: z.infer<typeof EvidenceQualitySchema>; reviewStatus: z.infer<typeof EvidenceReviewStatusSchema>; reviewer: string | null; reviewedAt: string | null }, context: z.RefinementCtx): void {
+function validateReviewFields(record: { evidenceQuality: z.infer<typeof EvidenceQualitySchema>; reviewStatus: z.infer<typeof EvidenceReviewStatusSchema>; reviewer: string | null; reviewedAt: string | null; rejectionReason: string | null }, context: z.RefinementCtx): void {
   const reviewed = record.reviewStatus === 'approved' || record.reviewStatus === 'rejected';
   if (reviewed && !record.reviewer) context.addIssue({ code: 'custom', path: ['reviewer'], message: 'Reviewed evidence requires a reviewer' });
   if (reviewed && !record.reviewedAt) context.addIssue({ code: 'custom', path: ['reviewedAt'], message: 'Reviewed evidence requires a review timestamp' });
-  if (!reviewed && (record.reviewer || record.reviewedAt)) context.addIssue({ code: 'custom', message: 'Unreviewed evidence cannot include reviewer approval metadata' });
+  if (!reviewed && (record.reviewer || record.reviewedAt || record.rejectionReason)) context.addIssue({ code: 'custom', message: 'Unreviewed evidence cannot include reviewer decision metadata' });
   if (record.reviewStatus === 'approved' && record.evidenceQuality === 'unverified') context.addIssue({ code: 'custom', path: ['evidenceQuality'], message: 'Unverified sources cannot be approved' });
+  if (record.reviewStatus === 'approved' && record.rejectionReason) context.addIssue({ code: 'custom', path: ['rejectionReason'], message: 'Approved evidence cannot include a rejection reason' });
+  if (record.reviewStatus === 'rejected' && !record.rejectionReason) context.addIssue({ code: 'custom', path: ['rejectionReason'], message: 'Rejected evidence requires a reason' });
 }
 
 export function isCanonicalHttpsHostname(value: string): boolean {
@@ -228,6 +231,7 @@ export const CommercialObservationSchema = z.object({
   offerId: z.string().min(1),
   manufacturer: z.string().min(1),
   merchant: z.string().min(1),
+  collectedBy: z.string().trim().min(1).max(120).nullable().default(null),
   configuration: ProductConfigurationSchema,
   currency: z.literal('USD'),
   priceCents: z.number().int().nonnegative().nullable(),
@@ -240,9 +244,33 @@ export const CommercialObservationSchema = z.object({
   ...EvidenceReviewFields,
 }).superRefine((observation, context) => {
   validateReviewFields(observation, context);
+  const reviewed = observation.reviewStatus === 'approved' || observation.reviewStatus === 'rejected';
+  if (reviewed && !observation.collectedBy) context.addIssue({ code: 'custom', path: ['collectedBy'], message: 'A named collector is required to establish independent review' });
+  if (reviewed && observation.collectedBy?.toLowerCase() === observation.reviewer?.trim().toLowerCase()) {
+    context.addIssue({ code: 'custom', path: ['reviewer'], message: 'The reviewer must be different from the evidence collector' });
+  }
   if (observation.shippingStatus === 'unknown' && observation.mandatoryShippingCents !== null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Unknown shipping must remain null' });
   if (observation.shippingStatus === 'free' && observation.mandatoryShippingCents !== 0) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Free shipping must be recorded as zero cents' });
   if (observation.shippingStatus === 'known' && observation.mandatoryShippingCents === null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Known shipping requires an amount' });
+});
+
+export const EditorialReviewDecisionSchema = z.enum(['approved', 'rejected']);
+
+export const EditorialReviewEventSchema = z.object({
+  id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
+  observationId: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
+  collector: z.string().trim().min(1).max(120),
+  decision: EditorialReviewDecisionSchema,
+  reviewer: z.string().trim().min(1).max(120),
+  reviewedAt: TimestampSchema,
+  sourceUrl: HttpsUrlSchema,
+  evidenceObservedAt: TimestampSchema,
+  rejectionReason: z.string().trim().min(1).max(1000).nullable().default(null),
+}).superRefine((event, context) => {
+  if (Date.parse(event.reviewedAt) < Date.parse(event.evidenceObservedAt)) context.addIssue({ code: 'custom', path: ['reviewedAt'], message: 'Review cannot predate the evidence' });
+  if (event.collector.toLowerCase() === event.reviewer.toLowerCase()) context.addIssue({ code: 'custom', path: ['reviewer'], message: 'The reviewer must be different from the evidence collector' });
+  if (event.decision === 'approved' && event.rejectionReason) context.addIssue({ code: 'custom', path: ['rejectionReason'], message: 'Approved review events cannot include a rejection reason' });
+  if (event.decision === 'rejected' && !event.rejectionReason) context.addIssue({ code: 'custom', path: ['rejectionReason'], message: 'Rejected review events require a reason' });
 });
 
 export const CandidateVerificationAssessmentSchema = z.object({
@@ -263,11 +291,35 @@ export const ObservationCollectionSchema = z.object({
   lastUpdatedAt: TimestampSchema,
   observations: z.array(CommercialObservationSchema),
   candidateAssessments: z.array(CandidateVerificationAssessmentSchema),
+  reviewEvents: z.array(EditorialReviewEventSchema).default([]),
 }).superRefine((collection, context) => {
   const observationIds = new Set<string>();
+  const observationById = new Map<string, z.infer<typeof CommercialObservationSchema>>();
   collection.observations.forEach((observation, index) => {
     if (observationIds.has(observation.id)) context.addIssue({ code: 'custom', path: ['observations', index, 'id'], message: 'Observation IDs must be unique' });
     observationIds.add(observation.id);
+    observationById.set(observation.id, observation);
+  });
+  const eventIds = new Set<string>();
+  const eventObservationIds = new Set<string>();
+  collection.reviewEvents.forEach((event, index) => {
+    if (eventIds.has(event.id)) context.addIssue({ code: 'custom', path: ['reviewEvents', index, 'id'], message: 'Review event IDs must be unique' });
+    eventIds.add(event.id);
+    if (eventObservationIds.has(event.observationId)) context.addIssue({ code: 'custom', path: ['reviewEvents', index, 'observationId'], message: 'Each observation may have only one terminal editorial decision' });
+    eventObservationIds.add(event.observationId);
+    const observation = observationById.get(event.observationId);
+    if (!observation) {
+      context.addIssue({ code: 'custom', path: ['reviewEvents', index, 'observationId'], message: 'Review event must reference an observation' });
+      return;
+    }
+    if (observation.reviewStatus !== event.decision || observation.collectedBy !== event.collector || observation.reviewer !== event.reviewer || observation.reviewedAt !== event.reviewedAt || observation.rejectionReason !== event.rejectionReason || observation.sourceUrl !== event.sourceUrl || observation.observedAt !== event.evidenceObservedAt) {
+      context.addIssue({ code: 'custom', path: ['reviewEvents', index], message: 'Review event must match the observation decision and evidence provenance' });
+    }
+  });
+  collection.observations.forEach((observation, index) => {
+    if ((observation.reviewStatus === 'approved' || observation.reviewStatus === 'rejected') && !eventObservationIds.has(observation.id)) {
+      context.addIssue({ code: 'custom', path: ['observations', index, 'reviewStatus'], message: 'Terminal editorial decisions require an audit event' });
+    }
   });
   const assessedProducts = new Set<string>();
   collection.candidateAssessments.forEach((assessment, index) => {
@@ -334,5 +386,7 @@ export type Catalog = z.infer<typeof CatalogSchema>;
 export type AffiliateProgram = z.infer<typeof AffiliateProgramSchema>;
 export type AffiliateRegistry = z.infer<typeof AffiliateRegistrySchema>;
 export type CommercialObservation = z.infer<typeof CommercialObservationSchema>;
+export type EditorialReviewEvent = z.infer<typeof EditorialReviewEventSchema>;
+export type EditorialReviewDecision = z.infer<typeof EditorialReviewDecisionSchema>;
 export type ObservationCollection = z.infer<typeof ObservationCollectionSchema>;
 export type CandidateVerificationAssessment = z.infer<typeof CandidateVerificationAssessmentSchema>;

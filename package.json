@@ -15,6 +15,8 @@
     "observations:list": "node --experimental-strip-types scripts/observations.ts list",
     "observations:validate": "node --experimental-strip-types scripts/observations.ts validate",
     "observations:preview": "node --experimental-strip-types scripts/observations.ts preview",
+    "observations:ingest": "node --experimental-strip-types scripts/observations.ts ingest",
+    "observations:review": "node --experimental-strip-types scripts/observations.ts review",
     "observations:record": "node --experimental-strip-types scripts/observations.ts record",
     "quality:report": "node --experimental-strip-types scripts/observations.ts report"
   },

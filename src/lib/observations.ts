@@ -1,8 +1,119 @@
 import { resolveAffiliateLink } from './affiliate.ts';
 import { AVAILABILITY_FRESHNESS_MS, PRICE_FRESHNESS_MS, isSpecificationReviewDue, isVerifiedOfferEligible, timestampIsFresh } from './eligibility.ts';
-import type { AffiliateProgram, Catalog, CommercialObservation, ObservationCollection, Product } from './schema.ts';
+import { CommercialObservationSchema, EditorialReviewEventSchema, ObservationCollectionSchema } from './schema.ts';
+import type { AffiliateProgram, Catalog, CommercialObservation, EditorialReviewDecision, ObservationCollection, Product } from './schema.ts';
 
 export type ObservationProblem = { key: string; observationIds: string[]; message: string };
+
+export type EditorialDecisionInput = {
+  observationId: string;
+  decision: EditorialReviewDecision;
+  reviewer: string;
+  reviewedAt: string;
+  rejectionReason?: string;
+};
+
+export function prepareObservationIngestion(
+  existing: ObservationCollection,
+  incoming: ObservationCollection,
+  products: Product[],
+  collectorName: string,
+  ingestedAt: string,
+  now = new Date(),
+): ObservationCollection {
+  const parsedExisting = ObservationCollectionSchema.parse(existing);
+  const parsedIncoming = ObservationCollectionSchema.parse(incoming);
+  const collector = collectorName.trim();
+  const ingestedAtMs = Date.parse(ingestedAt);
+  if (!collector) throw new Error('Evidence collector identity is required');
+  if (!Number.isFinite(ingestedAtMs) || new Date(ingestedAtMs).toISOString() !== ingestedAt || ingestedAtMs > now.getTime()) {
+    throw new Error('Ingestion timestamp must be canonical UTC and not in the future');
+  }
+  if (parsedIncoming.observations.length === 0 || parsedIncoming.reviewEvents.length > 0) {
+    throw new Error('Ingestion requires one or more unreviewed observations and no review events');
+  }
+  if (parsedIncoming.observations.some((item) => (
+    (item.reviewStatus !== 'draft' && item.reviewStatus !== 'pending_review')
+    || item.reviewer !== null
+    || item.reviewedAt !== null
+    || item.rejectionReason !== null
+    || item.collectedBy?.toLowerCase() !== collector.toLowerCase()
+    || Date.parse(item.observedAt) > ingestedAtMs
+  ))) {
+    throw new Error('Each ingested observation must be unreviewed, timestamped, collected by the named collector, and observed no later than ingestion');
+  }
+  const merged = ObservationCollectionSchema.parse({
+    lastUpdatedAt: ingestedAt,
+    observations: [...parsedExisting.observations, ...parsedIncoming.observations],
+    candidateAssessments: parsedExisting.candidateAssessments,
+    reviewEvents: parsedExisting.reviewEvents,
+  });
+  const referenceErrors = validateObservationReferences(merged, products);
+  const duplicates = findDuplicateObservations(merged.observations);
+  const conflicts = findConflictingObservations(merged.observations);
+  if (referenceErrors.length || duplicates.length || conflicts.length) {
+    throw new Error(JSON.stringify({ referenceErrors, duplicates, conflicts }));
+  }
+  return merged;
+}
+
+export function applyEditorialDecision(collection: ObservationCollection, input: EditorialDecisionInput, now = new Date()): ObservationCollection {
+  const parsedCollection = ObservationCollectionSchema.parse(collection);
+  const observationIndex = parsedCollection.observations.findIndex((item) => item.id === input.observationId);
+  if (observationIndex < 0) throw new Error(`Unknown observation: ${input.observationId}`);
+  const observation = parsedCollection.observations[observationIndex]!;
+  if (observation.reviewStatus !== 'draft' && observation.reviewStatus !== 'pending_review') {
+    throw new Error(`Observation ${input.observationId} already has a terminal review decision`);
+  }
+  const reviewer = input.reviewer.trim();
+  if (!reviewer) throw new Error('Reviewer identity is required');
+  if (!observation.collectedBy) throw new Error('A named evidence collector is required before independent review');
+  if (observation.collectedBy.toLowerCase() === reviewer.toLowerCase()) throw new Error('The reviewer must be different from the evidence collector');
+  const reviewedAtMs = Date.parse(input.reviewedAt);
+  if (!Number.isFinite(reviewedAtMs) || reviewedAtMs > now.getTime()) throw new Error('Review timestamp must be valid and not in the future');
+  if (reviewedAtMs < Date.parse(observation.observedAt)) throw new Error('Review timestamp cannot predate the evidence');
+
+  const rejectionReason = input.decision === 'rejected' ? input.rejectionReason?.trim() ?? '' : null;
+  if (input.decision === 'rejected' && !rejectionReason) throw new Error('Rejected evidence requires a reason');
+  if (input.decision === 'approved') {
+    if (observation.priceCents === null || !timestampIsFresh(observation.observedAt, PRICE_FRESHNESS_MS, new Date(reviewedAtMs))) {
+      throw new Error('Price evidence must be present and fresh within seven days to approve');
+    }
+    if (observation.shippingStatus === 'unknown' || observation.mandatoryShippingCents === null) {
+      throw new Error('Mandatory shipping evidence is required to approve');
+    }
+    if (observation.availability === 'unknown' || !timestampIsFresh(observation.observedAt, AVAILABILITY_FRESHNESS_MS, new Date(reviewedAtMs))) {
+      throw new Error('Availability evidence must be present and fresh within three days to approve');
+    }
+  }
+
+  const updatedObservation = CommercialObservationSchema.parse({
+    ...observation,
+    reviewStatus: input.decision,
+    reviewer,
+    reviewedAt: input.reviewedAt,
+    rejectionReason,
+  });
+  const event = EditorialReviewEventSchema.parse({
+    id: `review-${observation.id}-${reviewedAtMs}`,
+    observationId: observation.id,
+    collector: observation.collectedBy,
+    decision: input.decision,
+    reviewer,
+    reviewedAt: input.reviewedAt,
+    sourceUrl: observation.sourceUrl,
+    evidenceObservedAt: observation.observedAt,
+    rejectionReason,
+  });
+  const observations = [...parsedCollection.observations];
+  observations[observationIndex] = updatedObservation;
+  return ObservationCollectionSchema.parse({
+    ...parsedCollection,
+    lastUpdatedAt: input.reviewedAt,
+    observations,
+    reviewEvents: [...parsedCollection.reviewEvents, event],
+  });
+}
 
 function observationKey(observation: CommercialObservation): string {
   return [observation.productId, observation.offerId, observation.configuration.id, observation.merchant.toLowerCase(), observation.sourceUrl, observation.observedAt].join('|');
