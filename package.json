@@ -7,10 +7,16 @@
     "dev": "astro dev --host 127.0.0.1",
     "build": "astro check && astro build",
     "preview": "astro preview",
+    "smoke": "node scripts/smoke-test.mjs",
     "check": "astro check",
     "test": "vitest run",
     "test:watch": "vitest",
-    "catalog:check": "node scripts/validate-catalog.mjs --catalog src/data/candidates.json --dry-run"
+    "catalog:check": "node scripts/validate-catalog.mjs --catalog src/data/candidates.json --dry-run && node --experimental-strip-types scripts/observations.ts validate --input src/data/observations.json",
+    "observations:list": "node --experimental-strip-types scripts/observations.ts list",
+    "observations:validate": "node --experimental-strip-types scripts/observations.ts validate",
+    "observations:preview": "node --experimental-strip-types scripts/observations.ts preview",
+    "observations:record": "node --experimental-strip-types scripts/observations.ts record",
+    "quality:report": "node --experimental-strip-types scripts/observations.ts report"
   },
   "dependencies": {
     "astro": "^7.4.1",

@@ -1,18 +1,55 @@
 import { z } from 'zod';
 
 export const MAX_FUTURE_TIMESTAMP_MS = 36 * 60 * 60 * 1000;
-const TimestampSchema = z.iso.datetime({ offset: true }).superRefine((value, context) => {
+export const TimestampSchema = z.iso.datetime().superRefine((value, context) => {
   if (Date.parse(value) > Date.now() + MAX_FUTURE_TIMESTAMP_MS) context.addIssue({ code: 'custom', message: 'Timestamp is too far in the future' });
 });
 
 export const MarketSchema = z.enum(['US']);
 export const CategorySchema = z.enum(['standing_desk', 'ergonomic_chair', 'monitor_arm', 'docking_station']);
 export const DataStatusSchema = z.enum(['verified', 'partially_verified', 'unverified', 'demo']);
-export const AvailabilitySchema = z.enum(['in_stock', 'out_of_stock', 'discontinued', 'unknown']);
+export const AvailabilitySchema = z.enum(['in_stock', 'out_of_stock', 'preorder', 'discontinued', 'unknown']);
 export const AffiliateProgramStatusSchema = z.enum(['approved', 'pending', 'not_participating', 'unavailable']);
 export const AffiliateProgramLifecycleStatusSchema = z.enum(['not_applied', 'applied', 'pending', 'approved', 'rejected', 'suspended', 'expired']);
 export const ImageUsagePermissionSchema = z.enum(['licensed', 'manufacturer_authorized', 'unknown', 'not_provided']);
 export const SourceKindSchema = z.enum(['manufacturer_product_page', 'manufacturer_specification', 'authorized_merchant', 'manual']);
+export const EvidenceQualitySchema = z.enum(['primary', 'authorized_secondary', 'unverified']);
+export const EvidenceReviewStatusSchema = z.enum(['draft', 'pending_review', 'approved', 'rejected']);
+export const ShippingStatusSchema = z.enum(['known', 'free', 'unknown']);
+
+const HttpsUrlSchema = z.url().superRefine((value, context) => {
+  try {
+    if (new URL(value).protocol !== 'https:') context.addIssue({ code: 'custom', message: 'Evidence URLs must use HTTPS' });
+  } catch {
+    context.addIssue({ code: 'custom', message: 'Evidence URL is invalid' });
+  }
+});
+
+export const ProductConfigurationSchema = z.object({
+  id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
+  label: z.string().min(1).max(300),
+  exactModel: z.string().min(1).max(200),
+  desktopWidthInches: z.number().positive().nullable(),
+  desktopDepthInches: z.number().positive().nullable(),
+  selectedOptions: z.record(z.string(), z.string().min(1)).default({}),
+});
+
+const EvidenceReviewFields = {
+  evidenceNotes: z.string().min(1).max(1000),
+  evidenceQuality: EvidenceQualitySchema,
+  reviewStatus: EvidenceReviewStatusSchema,
+  reviewer: z.string().min(1).max(120).nullable(),
+  reviewedAt: TimestampSchema.nullable(),
+  sourceMetadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).default({}),
+};
+
+function validateReviewFields(record: { evidenceQuality: z.infer<typeof EvidenceQualitySchema>; reviewStatus: z.infer<typeof EvidenceReviewStatusSchema>; reviewer: string | null; reviewedAt: string | null }, context: z.RefinementCtx): void {
+  const reviewed = record.reviewStatus === 'approved' || record.reviewStatus === 'rejected';
+  if (reviewed && !record.reviewer) context.addIssue({ code: 'custom', path: ['reviewer'], message: 'Reviewed evidence requires a reviewer' });
+  if (reviewed && !record.reviewedAt) context.addIssue({ code: 'custom', path: ['reviewedAt'], message: 'Reviewed evidence requires a review timestamp' });
+  if (!reviewed && (record.reviewer || record.reviewedAt)) context.addIssue({ code: 'custom', message: 'Unreviewed evidence cannot include reviewer approval metadata' });
+  if (record.reviewStatus === 'approved' && record.evidenceQuality === 'unverified') context.addIssue({ code: 'custom', path: ['evidenceQuality'], message: 'Unverified sources cannot be approved' });
+}
 
 export function isCanonicalHttpsHostname(value: string): boolean {
   if (value.length === 0 || value.length > 253 || value !== value.trim() || value !== value.toLowerCase()) return false;
@@ -161,24 +198,89 @@ export const ProductSchema = z.object({
 });
 
 export const PriceObservationSchema = z.object({
+  configurationId: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
   priceCents: z.number().int().nonnegative(),
   currency: z.literal('USD'),
   seller: z.string().min(1),
-  sourceUrl: z.url(),
+  sourceUrl: HttpsUrlSchema,
   observedAt: TimestampSchema,
   mandatoryShippingCents: z.number().int().nonnegative().nullable(),
+  shippingStatus: ShippingStatusSchema,
+  ...EvidenceReviewFields,
+}).superRefine((observation, context) => {
+  validateReviewFields(observation, context);
+  if (observation.shippingStatus === 'unknown' && observation.mandatoryShippingCents !== null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Unknown shipping must remain null' });
+  if (observation.shippingStatus === 'free' && observation.mandatoryShippingCents !== 0) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Free shipping must be recorded as zero cents' });
+  if (observation.shippingStatus === 'known' && observation.mandatoryShippingCents === null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Known shipping requires an amount' });
 });
 
 export const AvailabilityObservationSchema = z.object({
+  configurationId: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
   availability: AvailabilitySchema,
-  sourceUrl: z.url(),
+  sourceUrl: HttpsUrlSchema,
   observedAt: TimestampSchema,
+  ...EvidenceReviewFields,
+}).superRefine((observation, context) => validateReviewFields(observation, context));
+
+export const CommercialObservationSchema = z.object({
+  id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
+  productId: z.string().min(1),
+  offerId: z.string().min(1),
+  manufacturer: z.string().min(1),
+  merchant: z.string().min(1),
+  configuration: ProductConfigurationSchema,
+  currency: z.literal('USD'),
+  priceCents: z.number().int().nonnegative().nullable(),
+  mandatoryShippingCents: z.number().int().nonnegative().nullable(),
+  shippingStatus: ShippingStatusSchema,
+  availability: AvailabilitySchema,
+  productUrl: HttpsUrlSchema,
+  sourceUrl: HttpsUrlSchema,
+  observedAt: TimestampSchema,
+  ...EvidenceReviewFields,
+}).superRefine((observation, context) => {
+  validateReviewFields(observation, context);
+  if (observation.shippingStatus === 'unknown' && observation.mandatoryShippingCents !== null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Unknown shipping must remain null' });
+  if (observation.shippingStatus === 'free' && observation.mandatoryShippingCents !== 0) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Free shipping must be recorded as zero cents' });
+  if (observation.shippingStatus === 'known' && observation.mandatoryShippingCents === null) context.addIssue({ code: 'custom', path: ['mandatoryShippingCents'], message: 'Known shipping requires an amount' });
+});
+
+export const CandidateVerificationAssessmentSchema = z.object({
+  productId: z.string().min(1),
+  manufacturer: z.string().min(1),
+  exactConfiguration: ProductConfigurationSchema.nullable(),
+  productUrl: HttpsUrlSchema,
+  sourceUrls: z.array(HttpsUrlSchema).min(1),
+  assessedAt: TimestampSchema,
+  priceStatus: z.enum(['observed', 'missing', 'ambiguous']),
+  shippingStatus: ShippingStatusSchema,
+  availability: AvailabilitySchema,
+  missingEvidence: z.array(z.enum(['exact_configuration', 'price', 'mandatory_shipping', 'availability', 'human_review'])),
+  notes: z.string().min(1).max(1500),
+});
+
+export const ObservationCollectionSchema = z.object({
+  lastUpdatedAt: TimestampSchema,
+  observations: z.array(CommercialObservationSchema),
+  candidateAssessments: z.array(CandidateVerificationAssessmentSchema),
+}).superRefine((collection, context) => {
+  const observationIds = new Set<string>();
+  collection.observations.forEach((observation, index) => {
+    if (observationIds.has(observation.id)) context.addIssue({ code: 'custom', path: ['observations', index, 'id'], message: 'Observation IDs must be unique' });
+    observationIds.add(observation.id);
+  });
+  const assessedProducts = new Set<string>();
+  collection.candidateAssessments.forEach((assessment, index) => {
+    if (assessedProducts.has(assessment.productId)) context.addIssue({ code: 'custom', path: ['candidateAssessments', index, 'productId'], message: 'Candidate assessments must be unique by product' });
+    assessedProducts.add(assessment.productId);
+  });
 });
 
 export const OfferSchema = z.object({
   id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
   productId: z.string().min(1),
   retailer: z.string().min(1),
+  configurationId: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/).optional(),
   market: MarketSchema,
   dataStatus: DataStatusSchema,
   currency: z.literal('USD'),
@@ -203,6 +305,7 @@ export const OfferSchema = z.object({
   if (offer.priceCents !== null && offer.priceObservations.length === 0 && offer.dataStatus !== 'demo') context.addIssue({ code: 'custom', path: ['priceObservations'], message: 'Non-demo prices require a sourced price observation' });
   if (offer.availability !== 'unknown' && !offer.availabilityObservedAt && offer.dataStatus !== 'demo') context.addIssue({ code: 'custom', path: ['availabilityObservedAt'], message: 'Known availability requires an observation timestamp' });
   if (offer.dataStatus === 'verified' && offer.sourceUrls.length === 0 && offer.priceObservations.length === 0 && offer.availabilityObservations.length === 0) context.addIssue({ code: 'custom', message: 'Verified offers require source evidence' });
+  if (offer.dataStatus === 'verified' && !offer.configurationId) context.addIssue({ code: 'custom', path: ['configurationId'], message: 'Verified offers require an exact configuration ID' });
 });
 
 export const CatalogSchema = z.object({
@@ -230,3 +333,6 @@ export type Offer = z.infer<typeof OfferSchema>;
 export type Catalog = z.infer<typeof CatalogSchema>;
 export type AffiliateProgram = z.infer<typeof AffiliateProgramSchema>;
 export type AffiliateRegistry = z.infer<typeof AffiliateRegistrySchema>;
+export type CommercialObservation = z.infer<typeof CommercialObservationSchema>;
+export type ObservationCollection = z.infer<typeof ObservationCollectionSchema>;
+export type CandidateVerificationAssessment = z.infer<typeof CandidateVerificationAssessmentSchema>;
