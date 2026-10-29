@@ -14,7 +14,23 @@ export const AffiliateProgramLifecycleStatusSchema = z.enum(['not_applied', 'app
 export const ImageUsagePermissionSchema = z.enum(['licensed', 'manufacturer_authorized', 'unknown', 'not_provided']);
 export const SourceKindSchema = z.enum(['manufacturer_product_page', 'manufacturer_specification', 'authorized_merchant', 'manual']);
 
-const DomainSchema = z.string().trim().toLowerCase().regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/);
+export function isCanonicalHttpsHostname(value: string): boolean {
+  if (value.length === 0 || value.length > 253 || value !== value.trim() || value !== value.toLowerCase()) return false;
+  if (!value.includes('.') || value.startsWith('.') || value.endsWith('.') || value.includes('*')) return false;
+  const labels = value.split('.');
+  if (labels.some((label) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))) return false;
+  if (labels.every((label) => /^\d+$/.test(label)) || /^\d+$/.test(labels.at(-1)!)) return false;
+  try {
+    const url = new URL(`https://${value}/`);
+    return url.protocol === 'https:' && url.hostname === value && url.host === value && url.username === '' && url.password === '';
+  } catch {
+    return false;
+  }
+}
+
+const DomainSchema = z.string().superRefine((value, context) => {
+  if (!isCanonicalHttpsHostname(value)) context.addIssue({ code: 'custom', message: 'Destination domain must be a canonical HTTPS hostname' });
+});
 const CredentialReferenceSchema = z.string().regex(/^credential-ref:[a-z0-9][a-z0-9_./:-]*$/);
 
 export const AffiliateApprovalEvidenceSchema = z.object({

@@ -8,7 +8,8 @@ Test date: 2026-10-29. Scope: local `feature/phase3-affiliate-integration` branc
 | --- | --- |
 | `npm.cmd ci` | Blocked by Windows `EPERM` while unlinking a Rollup native binary held by a pre-existing local Astro process. The process was not terminated because it may be user-owned. |
 | Local dependency repair | `npm.cmd install --ignore-scripts --no-audit --no-fund` restored the local dependency tree without changing `package-lock.json`. |
-| `npm.cmd test` | Pass: 23 tests across catalog/recommendation and affiliate registry/resolver coverage. |
+| `npm.cmd test` | Pass: 39 tests across catalog/recommendation and affiliate registry/resolver coverage. |
+| `npm.cmd run check` | Pass: `astro check` reports 0 errors, warnings, and hints. |
 | `npm.cmd run build` | Pass: `astro check` reports 0 errors, warnings, and hints; all static routes build. |
 | `npm.cmd audit` | Pass: 0 vulnerabilities. |
 | `npm.cmd run catalog:check` | Pass: dry-run validates the 10-record partial-verification research queue and zero offers. |
@@ -18,7 +19,9 @@ Test date: 2026-10-29. Scope: local `feature/phase3-affiliate-integration` branc
 - Registry validates eight `not_applied` merchants with zero approvals, destination domains, and credential references.
 - Resolver tests block pending, rejected, suspended, and expired programs.
 - Schema rejects an approved program that lacks a safe tracking-ID reference.
+- Schema rejects empty, wildcard, URL-shaped, IP, single-label, mixed-case, trailing-dot, whitespace-padded, and malformed destination allowlist entries.
 - Resolver blocks unallowlisted destinations, merchant mismatches, demo products, and partially verified offers.
+- The shared eligibility gate blocks approved offers with missing, stale, mismatched, or invalid price, mandatory-shipping, and stock observations, including direct resolver calls that bypass schema parsing.
 - Resolver emits `sponsored nofollow noopener noreferrer` only for a complete test-only approved fixture.
 - Existing deterministic-ranking tests confirm affiliate status/URL is not a scoring input.
 

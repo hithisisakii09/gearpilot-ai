@@ -1,7 +1,6 @@
 import type { Offer, Product } from './schema';
-
-export const PRICE_FRESHNESS_MS = 7 * 24 * 60 * 60 * 1000;
-export const AVAILABILITY_FRESHNESS_MS = 3 * 24 * 60 * 60 * 1000;
+import { isVerifiedOfferEligible } from './eligibility';
+export { AVAILABILITY_FRESHNESS_MS, isAvailabilityFresh, isPriceFresh, PRICE_FRESHNESS_MS } from './eligibility';
 
 export type Preference = 'value' | 'quality' | 'workspace_fit';
 export type Workspace = 'compact' | 'standard' | 'large';
@@ -15,12 +14,9 @@ const weights: Record<Preference, Recommendation['breakdown']> = {
 const workspaceMinimums: Record<Workspace, { width: number; depth: number }> = { compact: { width: 40, depth: 20 }, standard: { width: 48, depth: 24 }, large: { width: 60, depth: 30 } };
 
 function normalise(value: number | undefined, maximum: number): number { return value === undefined || maximum <= 0 ? 0 : Math.min(100, (value / maximum) * 100); }
-function timestampIsFresh(timestamp: string | null, maxAgeMs: number, now: Date): boolean { return timestamp !== null && now.getTime() - Date.parse(timestamp) <= maxAgeMs && Date.parse(timestamp) <= now.getTime(); }
-export function isPriceFresh(offer: Offer, now = new Date()): boolean { return offer.priceCents !== null && timestampIsFresh(offer.priceVerifiedAt, PRICE_FRESHNESS_MS, now); }
-export function isAvailabilityFresh(offer: Offer, now = new Date()): boolean { return offer.availability === 'in_stock' && timestampIsFresh(offer.availabilityObservedAt, AVAILABILITY_FRESHNESS_MS, now); }
 function isEligibleEvidence(product: Product, offer: Offer, now: Date): boolean {
   if (product.dataStatus === 'demo' && offer.dataStatus === 'demo') return true;
-  return product.dataStatus === 'verified' && offer.dataStatus === 'verified' && product.sources.length > 0 && isPriceFresh(offer, now) && isAvailabilityFresh(offer, now);
+  return isVerifiedOfferEligible(product, offer, now);
 }
 export function recommend(products: Product[], offers: Offer[], criteria: Criteria): Recommendation[] {
   if (!Number.isInteger(criteria.budgetCents) || criteria.budgetCents <= 0) throw new Error('Budget must be a positive integer in cents');
