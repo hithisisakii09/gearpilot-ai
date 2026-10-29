@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const breadcrumbs = [
+  { label: 'Home', path: '/' },
+  { label: 'Standing desk fit guide', path: '/guides/standing-desk-fit/' },
+];
+---
+<BaseLayout
+  title="Standing Desk Fit and Workspace Planning Guide | GearPilot AI"
+  description="A practical, non-review checklist for measuring your workspace and comparing desk dimensions, height range, capacity, warranty, and evidence."
+  canonicalPath="/guides/standing-desk-fit/"
+  breadcrumbs={breadcrumbs}
+>
+  <article>
+    <h1>Plan a standing desk that fits your workspace</h1>
+    <p>This is a planning guide, not a product review, ergonomic assessment, or medical recommendation. It uses the same published comparison fields as our finder and asks you to verify each detail against the exact desk configuration and its current manufacturer or seller documentation.</p>
+
+    <h2>Measure the space before comparing desks</h2>
+    <ul>
+      <li>Measure the usable width and depth where the desk will sit, accounting for walls, doors, walkways, and nearby furniture.</li>
+      <li>Check the desktop dimensions for the selected top, not only the adjustable frame. A frame's supported range does not establish the size of the desktop sold with it.</li>
+      <li>Consider the equipment that must fit on the surface and where cables and accessories will go. Treat these as your own requirements rather than assuming a product will suit every setup.</li>
+    </ul>
+
+    <h2>Compare adjustment range with your own setup</h2>
+    <p>Read the documented minimum and maximum height for the exact configuration, and check whether the published measurement includes the desktop. Compare that range with the seated and standing positions you can use comfortably in your own setup. There is no single range in this guide that is represented as suitable for everyone.</p>
+    <p>Desk height is only one part of a workstation. Keyboard, pointing device, monitor, chair, and individual needs also affect fit. If you have pain or a health concern, seek advice from an appropriately qualified professional rather than relying on a product comparison.</p>
+
+    <h2>Interpret capacity and stability claims carefully</h2>
+    <p>Compare the manufacturer's stated load capacity with the equipment and accessories you plan to place on the desk. Confirm what the published figure covers and whether the manufacturer documents any limits for the selected frame or desktop. Do not treat capacity alone as a guarantee of stability in every configuration.</p>
+
+    <h2>Review warranty and return terms at the source</h2>
+    <p>Check the current warranty and return policy for the selected product, seller, and region before purchasing. Confirm coverage duration, covered components, exclusions, shipping responsibilities, and the return window directly with the responsible seller. GearPilot AI does not infer those terms when source evidence is missing.</p>
+
+    <h2>Check evidence before trusting a comparison</h2>
+    <p>Prefer exact model and configuration details with dated manufacturer or authorized-seller sources. Price and shipping may change; availability may change even sooner. GearPilot's publication rules require reviewed evidence within its freshness window, and unknown shipping or stock is not treated as free or available. Read the <a href="/methodology/">comparison methodology</a> for the evidence and eligibility rules.</p>
+    <p>The current public finder uses clearly labeled synthetic demonstration records. The research candidates are not verified purchase recommendations, and this guide does not claim hands-on testing, endorsements, ratings, or current prices.</p>
+  </article>
+</BaseLayout>
