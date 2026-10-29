@@ -2,7 +2,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { AffiliateRegistrySchema, CatalogSchema, ObservationCollectionSchema, type ObservationCollection } from '../src/lib/schema.ts';
-import { createCatalogQualityReport, findConflictingObservations, findDuplicateObservations, qualityReportMarkdown, validateObservationReferences } from '../src/lib/observations.ts';
+import { applyEditorialDecision, createCatalogQualityReport, findConflictingObservations, findDuplicateObservations, prepareObservationIngestion, qualityReportMarkdown, validateObservationReferences } from '../src/lib/observations.ts';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -58,6 +58,7 @@ if (command === 'list') {
     valid: summary.valid,
     observations: summary.candidateCollection.observations.length,
     assessments: summary.candidateCollection.candidateAssessments.length,
+    reviewEvents: summary.candidateCollection.reviewEvents.length,
     referenceErrors: summary.referenceErrors,
     duplicateObservations: summary.duplicates,
     conflictingObservations: summary.conflicts,
@@ -78,6 +79,7 @@ if (command === 'list') {
     lastUpdatedAt: reviewedAt,
     observations: [...existing.observations, ...proposed.observations],
     candidateAssessments: existing.candidateAssessments,
+    reviewEvents: [...existing.reviewEvents, ...proposed.reviewEvents],
   });
   const candidateCatalog = await catalog();
   const errors = validateObservationReferences(merged, candidateCatalog.products);
@@ -86,6 +88,63 @@ if (command === 'list') {
   if (errors.length || duplicates.length || conflicts.length) throw new Error(JSON.stringify({ errors, duplicates, conflicts }));
   await writeFile(defaultObservationPath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
   console.log(JSON.stringify({ recorded: proposed.observations.map((item) => item.id), reviewer, reviewedAt, destination: defaultObservationPath }, null, 2));
+} else if (command === 'ingest') {
+  const inputFlag = flag('--input');
+  const collector = flag('--collector')?.trim();
+  const ingestedAt = flag('--ingested-at');
+  const dryRun = has('--dry-run');
+  const write = has('--write');
+  if (!inputFlag || !collector || !ingestedAt || dryRun === write) {
+    throw new Error('ingest requires --input, --collector, --ingested-at, and exactly one of --dry-run or --write');
+  }
+  if (write && !has('--confirm-ingest')) throw new Error('Writing collected evidence requires --confirm-ingest');
+  const proposed = await collection(resolve(inputFlag));
+  const existing = await collection();
+  const candidateCatalog = await catalog();
+  const merged = prepareObservationIngestion(existing, proposed, candidateCatalog.products, collector, ingestedAt);
+  if (write) await writeFile(defaultObservationPath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
+  console.log(JSON.stringify({
+    mode: dryRun ? 'dry-run' : 'write',
+    writesPerformed: write,
+    ingested: proposed.observations.map((item) => item.id),
+    collector,
+    pendingReview: proposed.observations.length,
+    destination: write ? defaultObservationPath : null,
+  }, null, 2));
+} else if (command === 'review') {
+  const observationId = flag('--id');
+  const decision = flag('--decision');
+  const reviewer = flag('--reviewer');
+  const reviewedAt = flag('--reviewed-at');
+  const rejectionReason = flag('--reason') ?? undefined;
+  const dryRun = has('--dry-run');
+  const write = has('--write');
+  if (!observationId || (decision !== 'approved' && decision !== 'rejected') || !reviewer || !reviewedAt || dryRun === write) {
+    throw new Error('review requires --id, --decision approved|rejected, --reviewer, --reviewed-at, and exactly one of --dry-run or --write');
+  }
+  if (write && !has('--confirm-review')) throw new Error('Writing a review decision requires --confirm-review');
+  const reviewedAtDate = new Date(reviewedAt);
+  if (!Number.isFinite(reviewedAtDate.getTime()) || reviewedAtDate.toISOString() !== reviewedAt) throw new Error('--reviewed-at must be a canonical UTC ISO timestamp');
+  const reviewedCollection = applyEditorialDecision(await collection(), {
+    observationId,
+    decision,
+    reviewer,
+    reviewedAt,
+    rejectionReason,
+  });
+  if (write) await writeFile(defaultObservationPath, `${JSON.stringify(reviewedCollection, null, 2)}\n`, 'utf8');
+  const event = reviewedCollection.reviewEvents.at(-1)!;
+  console.log(JSON.stringify({
+    mode: dryRun ? 'dry-run' : 'write',
+    writesPerformed: write,
+    observationId,
+    decision,
+    reviewer: event.reviewer,
+    reviewedAt: event.reviewedAt,
+    rejectionReason: event.rejectionReason,
+    auditEventId: event.id,
+    destination: write ? defaultObservationPath : null,
+  }, null, 2));
 } else if (command === 'report') {
   const now = new Date(flag('--at') ?? Date.now());
   if (!Number.isFinite(now.getTime())) throw new Error('--at must be a valid timestamp');
@@ -99,6 +158,6 @@ if (command === 'list') {
   }
   console.log(JSON.stringify({ ...report, writesPerformed: has('--write') }, null, 2));
 } else {
-  console.error('Usage: observations.ts <list|validate|preview|record|report> [options]');
+  console.error('Usage: observations.ts <list|validate|preview|ingest|review|record|report> [options]');
   process.exitCode = 1;
 }
