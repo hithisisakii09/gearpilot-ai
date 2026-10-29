@@ -58,9 +58,42 @@ const approvalIntake = (overrides: Record<string, unknown> = {}) => ({
 describe('affiliate registry and resolver', () => {
   it('tracks researched merchants without asserting a program approval', () => {
     expect(registry.programs).toHaveLength(8);
-    expect(registry.programs.every((program) => program.status === 'not_applied')).toBe(true);
+    expect(registry.programs.filter((program) => program.id !== 'branch').every((program) => program.status === 'not_applied')).toBe(true);
     expect(registry.programs.every((program) => program.approvedDestinationDomains.length === 0 && program.trackingIdReference === null)).toBe(true);
     expect(resolveAffiliateLink(verifiedProduct, verifiedOffer(), registry.programs, now)).toBeNull();
+  });
+  it('records only the owner-supplied Branch pending application evidence without inferring approval', () => {
+    const branch = registry.programs.find((program) => program.id === 'branch')!;
+    expect(branch).toMatchObject({
+      status: 'pending',
+      networkName: 'CJ',
+      programName: 'Branch - Program Terms',
+      applicationEvidence: {
+        reference: 'owner-evidence:cj/relationship-history/branch-program-terms',
+        sourceType: 'owner_supplied_cj_screenshot',
+        observedOn: '2026-10-29',
+        advertiserId: '5885920',
+      },
+      approvalEvidence: null,
+      approvalDate: null,
+      approvedDestinationDomains: [],
+      trackingIdReference: null,
+    });
+    expect(registry.programs.filter((program) => program.id !== 'branch').every((program) => program.status === 'not_applied')).toBe(true);
+    expect(resolveAffiliateLink(verifiedProduct, verifiedOffer(), [branch], now)).toBeNull();
+    expect(JSON.stringify(branch)).not.toMatch(/w-?8ben|bank|account number|routing number|tax id|password/i);
+  });
+  it('requires safe, date-only application provenance for a pending Branch record', () => {
+    const branch = registry.programs.find((program) => program.id === 'branch')!;
+    expect(() => AffiliateProgramSchema.parse({ ...branch, applicationEvidence: null })).toThrow(/application status requires application evidence/);
+    expect(() => AffiliateProgramSchema.parse({
+      ...branch,
+      applicationEvidence: { ...branch.applicationEvidence!, reference: 'screenshot contents or secret' },
+    })).toThrow();
+    expect(() => AffiliateProgramSchema.parse({
+      ...branch,
+      applicationEvidence: { ...branch.applicationEvidence!, observedOn: '2026-10-29T13:45:00Z' },
+    })).toThrow();
   });
   it('requires documented terms on approved programs and separate CJ registration evidence', () => {
     expect(() => approvedProgram({ programRestrictions: [] })).toThrow(/documented program restrictions/);
@@ -93,7 +126,7 @@ describe('affiliate registry and resolver', () => {
       trackingIdReference: 'credential-ref:affiliate/branch/tracking-id',
     });
     expect(current.status).toBe('pending');
-    expect(registry.programs.find((program) => program.id === 'branch')?.status).toBe('not_applied');
+    expect(registry.programs.find((program) => program.id === 'branch')?.status).toBe('pending');
   });
   it.each([
     ['not owner-authorized', { ownerAuthorization: { authorized: false, authorizedBy: 'Owner', authorizedAt: '2026-10-29T10:00:00Z' } }],
@@ -130,11 +163,25 @@ describe('affiliate registry and resolver', () => {
   });
   it('does not transition a merchant that has not been applied to or one other than Branch', () => {
     const intake = BranchAffiliateApprovalIntakeSchema.parse(approvalIntake());
-    expect(() => prepareBranchAffiliateApproval(registry.programs.find((program) => program.id === 'branch')!, intake)).toThrow(/must be applied or pending/);
+    const notAppliedBranch = { ...registry.programs.find((program) => program.id === 'branch')!, status: 'not_applied' as const, applicationEvidence: null };
+    expect(() => prepareBranchAffiliateApproval(notAppliedBranch, intake)).toThrow(/must be applied or pending/);
     expect(() => prepareBranchAffiliateApproval({ ...pendingBranchProgram(), id: 'flexispot', merchantName: 'FlexiSpot' }, intake)).toThrow(/cannot update another merchant/);
   });
   it.each(['pending', 'rejected', 'suspended', 'expired'] as const)('blocks %s programs', (status) => {
-    const program = approvedProgram({ status, approvedDestinationDomains: [], approvalEvidence: null, approvalDate: null, trackingIdReference: null, expiresAt: status === 'expired' ? '2026-10-28T00:00:00Z' : null });
+    const program = approvedProgram({
+      status,
+      applicationEvidence: status === 'pending' ? {
+        reference: 'owner-evidence:cj/relationship-history/branch-program-terms',
+        sourceType: 'owner_supplied_cj_screenshot',
+        observedOn: '2026-10-29',
+        advertiserId: '5885920',
+      } : null,
+      approvedDestinationDomains: [],
+      approvalEvidence: null,
+      approvalDate: null,
+      trackingIdReference: null,
+      expiresAt: status === 'expired' ? '2026-10-28T00:00:00Z' : null,
+    });
     expect(resolveAffiliateLink(verifiedProduct, verifiedOffer(), [program], now)).toBeNull();
   });
   it('rejects an approved program missing a tracking-ID reference', () => {

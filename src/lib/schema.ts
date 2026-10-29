@@ -88,6 +88,13 @@ export const AffiliateNetworkRegistrationEvidenceSchema = z.object({
   sourceUrl: HttpsUrlSchema,
 });
 
+export const AffiliateApplicationEvidenceSchema = z.object({
+  reference: z.string().regex(/^owner-evidence:[a-z0-9][a-z0-9_./:-]*$/),
+  sourceType: z.literal('owner_supplied_cj_screenshot'),
+  observedOn: z.iso.date(),
+  advertiserId: z.string().trim().min(1).max(40),
+});
+
 export const AffiliateProgramSchema = z.object({
   id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
   merchantName: z.string().min(1),
@@ -96,6 +103,7 @@ export const AffiliateProgramSchema = z.object({
   programName: z.string().min(1).nullable(),
   networkName: z.string().min(1).nullable(),
   networkRegistrationEvidence: AffiliateNetworkRegistrationEvidenceSchema.nullable().default(null),
+  applicationEvidence: AffiliateApplicationEvidenceSchema.nullable().default(null),
   programRestrictions: z.array(z.string().trim().min(1).max(500)).default([]),
   allowedRegions: z.array(MarketSchema).default([]),
   approvedDestinationDomains: z.array(DomainSchema).default([]),
@@ -107,6 +115,15 @@ export const AffiliateProgramSchema = z.object({
   reviewNotes: z.string().min(1).nullable(),
   lastReviewedAt: TimestampSchema,
 }).superRefine((program, context) => {
+  if ((program.status === 'applied' || program.status === 'pending') && program.id === 'branch' && !program.applicationEvidence) {
+    context.addIssue({ code: 'custom', path: ['applicationEvidence'], message: 'Branch application status requires application evidence' });
+  }
+  if (program.applicationEvidence && program.id !== 'branch') {
+    context.addIssue({ code: 'custom', path: ['applicationEvidence'], message: 'Branch application evidence cannot be assigned to another merchant' });
+  }
+  if (program.applicationEvidence && program.status !== 'applied' && program.status !== 'pending' && program.status !== 'approved') {
+    context.addIssue({ code: 'custom', path: ['applicationEvidence'], message: 'Application evidence requires an applied, pending, or approved lifecycle status' });
+  }
   const needsApprovalProof = program.status === 'approved';
   if (needsApprovalProof && !program.programName) context.addIssue({ code: 'custom', path: ['programName'], message: 'Approved programs require a program name' });
   if (needsApprovalProof && !program.approvalEvidence) context.addIssue({ code: 'custom', path: ['approvalEvidence'], message: 'Approved programs require approval evidence' });

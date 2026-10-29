@@ -160,6 +160,9 @@ try {
   if (new Set(sitemapUrls).size !== sitemapUrls.length || sitemapUrls.some((url) => !indexableCanonicals.includes(url))) routeResults.push({ route: '/sitemap.xml', error: 'sitemap contains duplicate or non-indexable URLs' });
   if (sitemapUrls.some((url) => url.includes('/contact/'))) routeResults.push({ route: '/sitemap.xml', error: 'noindex contact URL appears in sitemap' });
 
+  const developmentPreview = await page.request.get(`${origin}/dev/product-profile-preview/`);
+  if (developmentPreview.status() !== 404) routeResults.push({ route: '/dev/product-profile-preview/', error: 'development-only product profile preview is exposed in the production build' });
+
   const unknown = await page.goto(`${origin}/not-a-real-route/`, { waitUntil: 'networkidle' });
   if (unknown?.status() !== 404 || await page.getByRole('heading', { name: 'Page not found' }).count() !== 1) routeResults.push({ route: '/not-a-real-route/', error: '404 response or custom page is missing' });
   if (await page.locator('meta[name="robots"]').getAttribute('content') !== 'noindex,follow') routeResults.push({ route: '/not-a-real-route/', error: '404 page must be noindex' });

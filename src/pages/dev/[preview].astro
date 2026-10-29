@@ -1,0 +1,82 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductProfile from '../../components/ProductProfile.astro';
+import { buildPublicProductProfile } from '../../lib/product-profile';
+import { ProductSchema } from '../../lib/schema';
+
+export function getStaticPaths() {
+  if (!import.meta.env.DEV) return [];
+  const previewObservedAt = '2026-10-29T00:00:00Z';
+
+  const product = ProductSchema.parse({
+    id: 'synthetic-profile-preview',
+    brand: 'Synthetic',
+    manufacturer: 'Synthetic test fixture',
+    model: 'Preview Standing Desk',
+    category: 'standing_desk',
+    market: 'US',
+    dataStatus: 'verified',
+    officialManufacturerUrl: 'https://manufacturer.example.test/preview-desk',
+    configuration: {
+      id: 'synthetic-preview-48x24',
+      label: 'Synthetic 48 × 24 inch test configuration',
+      exactModel: 'Preview Standing Desk',
+      sku: 'SYNTHETIC-ONLY',
+      desktopWidthInches: 48,
+      desktopDepthInches: 24,
+      selectedOptions: { desktop: 'Synthetic 48 × 24', frame: 'Synthetic black' },
+    },
+    specifications: {
+      electric: true,
+      desktopWidthInches: 48,
+      desktopDepthInches: 24,
+      minHeightInches: 28,
+      maxHeightInches: 47,
+      liftCapacityLbs: 150,
+      warrantyYears: 3,
+      materials: ['Synthetic fixture material'],
+    },
+    specificationReferences: {
+      identity: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      electric: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      desktopWidthInches: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      desktopDepthInches: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      minHeightInches: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      maxHeightInches: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      liftCapacityLbs: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      warrantyYears: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+      materials: { sourceId: 'synthetic-fixture-source', verifiedAt: previewObservedAt, status: 'verified' },
+    },
+    sourceUrls: ['https://manufacturer.example.test/preview-desk'],
+    sources: [{
+      id: 'synthetic-fixture-source',
+      publisher: 'Synthetic test fixture',
+      url: 'https://manufacturer.example.test/preview-desk',
+      kind: 'manufacturer_product_page',
+      observedAt: previewObservedAt,
+    }],
+    editorialApproval: {
+      collector: 'Synthetic fixture collector',
+      reviewer: 'Synthetic fixture reviewer',
+      reviewedAt: previewObservedAt,
+      sourceIds: ['synthetic-fixture-source'],
+    },
+    reviewNotes: 'Synthetic local preview only. This is not a real product, source, observation, or editorial decision.',
+    lastUpdatedAt: previewObservedAt,
+  });
+  const profile = buildPublicProductProfile(product, {
+    authorized: true,
+    productId: product.id,
+    authorizedBy: 'Synthetic fixture owner',
+    authorizedAt: previewObservedAt,
+  }, new Date('2026-10-29T12:00:00Z'));
+  return profile ? [{ params: { preview: 'product-profile-preview' }, props: { profile } }] : [];
+}
+
+const { profile } = Astro.props;
+---
+<BaseLayout title="Development product profile preview | GearPilot AI" description="Local-only synthetic fixture for previewing the informational product profile component." canonicalPath={null} indexable={false}>
+  <h1>Development-only profile preview</h1>
+  <p role="note"><strong>SYNTHETIC TEST FIXTURE.</strong> This page is generated only by the Astro development server. It is not a real product, evidence capture, editorial approval, or owner authorization.</p>
+  {profile && <ProductProfile profile={profile} />}
+</BaseLayout>

@@ -50,6 +50,25 @@ describe('product-only publication gate', () => {
     expect(buildPublicProductProfile(verifiedProduct, authorization, now)).not.toBeNull();
   });
 
+  it('requires independent product review and manufacturer evidence cited by that review', () => {
+    expect(buildPublicProductProfile({ ...verifiedProduct, editorialApproval: null }, authorization, now)).toBeNull();
+    expect(buildPublicProductProfile({
+      ...verifiedProduct,
+      editorialApproval: { ...verifiedProduct.editorialApproval!, reviewer: verifiedProduct.editorialApproval!.collector },
+    }, authorization, now)).toBeNull();
+    expect(buildPublicProductProfile({
+      ...verifiedProduct,
+      editorialApproval: { ...verifiedProduct.editorialApproval!, sourceIds: [] },
+    }, authorization, now)).toBeNull();
+    expect(buildPublicProductProfile({
+      ...verifiedProduct,
+      specificationReferences: {
+        ...verifiedProduct.specificationReferences,
+        identity: { ...verifiedProduct.specificationReferences.identity!, status: 'partially_verified' },
+      },
+    }, authorization, now)).toBeNull();
+  });
+
   it('does not create an offer or claim price, shipping, stock, return terms, or an affiliate URL', () => {
     const profile = buildPublicProductProfile(verifiedProduct, authorization, now);
     expect(profile).not.toBeNull();
@@ -68,11 +87,20 @@ describe('product-only publication gate', () => {
   });
 
   it('allows an informational product profile without affiliate approval, but exposes no affiliate URL', () => {
-    expect(affiliateRegistry.programs.every((program) => program.status === 'not_applied')).toBe(true);
+    expect(affiliateRegistry.programs.filter((program) => program.id !== 'branch').every((program) => program.status === 'not_applied')).toBe(true);
+    expect(affiliateRegistry.programs.find((program) => program.id === 'branch')?.status).toBe('pending');
     const profile = buildPublicProductProfile(verifiedProduct, authorization, now);
     expect(profile).not.toBeNull();
     expect(profile).not.toHaveProperty('affiliateUrl');
     expect(profile).not.toHaveProperty('purchaseUrl');
+  });
+
+  it('does not expose owner evidence metadata or personal banking/tax fields', () => {
+    const branch = affiliateRegistry.programs.find((program) => program.id === 'branch')!;
+    const serialized = JSON.stringify(branch);
+    expect(serialized).toContain('owner_supplied_cj_screenshot');
+    expect(serialized).not.toMatch(/w-?8ben|bank|account number|routing number|tax id|password|credential/i);
+    expect(branch.applicationEvidence?.reference).not.toContain('screenshot contents');
   });
 
   it('keeps demo product records ineligible for product-only publication', () => {
