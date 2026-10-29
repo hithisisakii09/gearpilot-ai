@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import candidates from '../src/data/candidates.json';
 import demo from '../src/data/demo.json';
 import { getApprovedAffiliateLink } from '../src/lib/affiliate';
+import { getOfferEvidenceIssues } from '../src/lib/eligibility';
 import { AVAILABILITY_FRESHNESS_MS, PRICE_FRESHNESS_MS, recommend, type Criteria } from '../src/lib/recommend';
 import { CatalogSchema, OfferSchema, PriceObservationSchema } from '../src/lib/schema';
 import { kilogramsToPounds, millimetresToInches } from '../src/lib/units';
@@ -101,6 +102,39 @@ describe('recommendation eligibility and scores', () => {
   });
   it('does not expose partially verified research candidates without sourced price and stock observations', () => {
     expect(recommend(candidateCatalog.products, candidateCatalog.offers, criteria)).toEqual([]);
+  });
+  it('reports publication blockers for Branch Duo and FlexiSpot E7 using non-publishing fixtures', () => {
+    for (const productId of ['branch-duo-standing-desk', 'flexispot-e7']) {
+      const product = candidateCatalog.products.find((candidate) => candidate.id === productId)!;
+      const dryRunOffer = OfferSchema.parse({
+        ...demoCatalog.offers[0]!,
+        id: `${productId}-dry-run`,
+        productId,
+        dataStatus: 'partially_verified',
+        configurationId: undefined,
+        priceCents: null,
+        mandatoryShippingCents: null,
+        priceVerifiedAt: null,
+        availability: 'unknown',
+        availabilityObservedAt: null,
+      });
+      const issues = getOfferEvidenceIssues(product, dryRunOffer, now);
+      expect(issues.map((issue) => issue.code)).toEqual(expect.arrayContaining([
+        'missing_product_verification',
+        'missing_offer_verification',
+        'missing_product_editorial_approval',
+        'unverified_product_identity',
+        'unverified_product_specification',
+        'missing_configuration',
+        'missing_warranty_evidence',
+        'missing_return_policy_evidence',
+        'missing_price',
+        'missing_shipping',
+        'missing_stock_observation',
+      ]));
+    }
+    expect(candidateCatalog.products.filter((product) => product.dataStatus === 'verified')).toHaveLength(0);
+    expect(candidateCatalog.offers).toHaveLength(0);
   });
   it('rejects stale price or availability observations and accepts current verified evidence', () => {
     const product = verifiedProduct();

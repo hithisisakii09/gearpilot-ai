@@ -30,6 +30,7 @@ describe('affiliate registry and resolver', () => {
     expect(registry.programs).toHaveLength(8);
     expect(registry.programs.every((program) => program.status === 'not_applied')).toBe(true);
     expect(registry.programs.every((program) => program.approvedDestinationDomains.length === 0 && program.trackingIdReference === null)).toBe(true);
+    expect(resolveAffiliateLink(verifiedProduct, verifiedOffer(), registry.programs, now)).toBeNull();
   });
   it.each(['pending', 'rejected', 'suspended', 'expired'] as const)('blocks %s programs', (status) => {
     const program = approvedProgram({ status, approvedDestinationDomains: [], approvalEvidence: null, approvalDate: null, trackingIdReference: null, expiresAt: status === 'expired' ? '2026-10-28T00:00:00Z' : null });
