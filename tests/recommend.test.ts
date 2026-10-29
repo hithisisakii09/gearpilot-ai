@@ -106,6 +106,19 @@ describe('recommendation eligibility and scores', () => {
     expect(compact).toHaveLength(3);
     expect(large).toEqual([]);
   });
+  it.each([
+    ['non-finite width', { minDesktopWidthInches: Number.NaN }],
+    ['non-finite height', { targetMinHeightInches: Number.POSITIVE_INFINITY }],
+    ['inverted height range', { targetMinHeightInches: 48, targetMaxHeightInches: 28 }],
+    ['invalid workspace', { workspace: 'unknown' }],
+    ['prototype workspace key', { workspace: '__proto__' }],
+    ['invalid preference', { preference: 'commission' }],
+    ['prototype preference key', { preference: '__proto__' }],
+    ['invalid market', { market: 'CA' }],
+    ['invalid date', { now: new Date(Number.NaN) }],
+  ])('rejects malformed user criteria: %s', (_label, overrides) => {
+    expect(() => recommend(demoCatalog.products, demoCatalog.offers, { ...criteria, ...overrides } as Criteria)).toThrow();
+  });
   it('is deterministic and ranking remains independent from affiliate status or URL', () => {
     const approved = demoCatalog.offers.map((offer) => OfferSchema.parse(offer.id === 'demo-offer-a' ? { ...offer, affiliateProgramStatus: 'approved', affiliateProgramId: 'branch', affiliateUrl: 'https://merchant.example/approved-link' } : offer));
     const baseline = recommend(demoCatalog.products, demoCatalog.offers, criteria);
