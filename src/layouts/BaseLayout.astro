@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Seo from '../components/Seo.astro';
 import { createBreadcrumbStructuredData, PUBLIC_SITE_URL, serializeJsonLd } from '../lib/seo';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_MAILTO } from '../lib/contact';
 
 interface Props {
   title: string;
@@ -50,7 +51,7 @@ const breadcrumbStructuredData = breadcrumbs.length ? createBreadcrumbStructured
     </main>
     <footer>
       <p>GearPilot AI provides transparent comparison tooling, not hands-on product reviews.</p>
-      <nav aria-label="Footer navigation"><a href="/about/">About</a> · <a href="/guides/standing-desk-fit/">Desk setup guide</a> · <a href="/affiliate-disclosure/">Affiliate disclosure</a> · <a href="/methodology/">Methodology</a> · <a href="/privacy/">Privacy</a> · <a href="/contact/">Contact</a></nav>
+      <nav aria-label="Footer navigation"><a href="/about/">About</a> · <a href="/guides/standing-desk-fit/">Desk setup guide</a> · <a href="/affiliate-disclosure/">Affiliate disclosure</a> · <a href="/methodology/">Methodology</a> · <a href="/privacy/">Privacy</a> · <a href="/contact/">Contact</a> · <a href={PUBLIC_CONTACT_MAILTO}>Email {PUBLIC_CONTACT_EMAIL}</a></nav>
     </footer>
   </body>
 </html>

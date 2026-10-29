@@ -81,6 +81,23 @@ try {
     if (status !== 200) continue;
 
     const errors = [];
+    const bodyText = await page.locator('body').innerText();
+    const obsoleteContactCopy = /has not established a public contact channel|has not published a public contact channel|cannot currently receive messages|monitored contact channel have not yet been published|no public privacy-request channel|must publish a monitored contact method/i;
+    if (obsoleteContactCopy.test(bodyText)) errors.push('obsolete no-contact-channel copy is present');
+    const contactRoutes = ['/contact/', '/privacy/', '/affiliate-disclosure/', '/about/'];
+    const emailLinks = page.locator('a[href="mailto:gearpilotai.contact@gmail.com"]');
+    if (contactRoutes.includes(route)) {
+      if (await emailLinks.count() < 2) errors.push('contact email is not displayed in both page content and footer');
+      if (!bodyText.includes('gearpilotai.contact@gmail.com')) errors.push('contact email is not visible');
+      const unlabeledEmailLink = await emailLinks.evaluateAll((links) => links.some((link) => !link.textContent?.trim()));
+      if (unlabeledEmailLink) errors.push('contact email mailto link has no accessible text');
+    }
+    if (route === '/affiliate-disclosure/') {
+      if (!/pending Branch advertiser application/i.test(bodyText)) errors.push('Branch pending status is not disclosed');
+      if (!/no independently verified real products, eligible commercial offers, or approved affiliate programs/i.test(bodyText)) {
+        errors.push('current verified-product and affiliate eligibility status is incomplete');
+      }
+    }
     const title = await page.title();
     const description = await page.locator('meta[name="description"]').getAttribute('content');
     const descriptionCount = await page.locator('meta[name="description"]').count();
@@ -162,6 +179,10 @@ try {
 
   const developmentPreview = await page.request.get(`${origin}/dev/product-profile-preview/`);
   if (developmentPreview.status() !== 404) routeResults.push({ route: '/dev/product-profile-preview/', error: 'development-only product profile preview is exposed in the production build' });
+  const productionPreviewContent = (await developmentPreview.text()).toLowerCase();
+  if (productionPreviewContent.includes('synthetic test fixture') || productionPreviewContent.includes('synthetic-preview-48x24')) {
+    routeResults.push({ route: '/dev/product-profile-preview/', error: 'synthetic preview product content is present in the production response' });
+  }
 
   const unknown = await page.goto(`${origin}/not-a-real-route/`, { waitUntil: 'networkidle' });
   if (unknown?.status() !== 404 || await page.getByRole('heading', { name: 'Page not found' }).count() !== 1) routeResults.push({ route: '/not-a-real-route/', error: '404 response or custom page is missing' });

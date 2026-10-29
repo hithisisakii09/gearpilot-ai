@@ -1,9 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_MAILTO } from '../lib/contact';
 ---
-<BaseLayout title="Contact | GearPilot AI" description="GearPilot AI has not established a public contact channel. Contact information will be added before public launch." canonicalPath="/contact/" indexable={false}>
+<BaseLayout title="Contact | GearPilot AI" description="Contact GearPilot AI by email for questions, privacy requests, corrections, or affiliate inquiries." canonicalPath="/contact/" indexable={false}>
   <h1>Contact</h1>
-  <p>GearPilot AI has not published a public contact channel yet. This page is not a contact form and currently cannot receive messages.</p>
-  <p>Before accepting visitors for a commercial service, the operator must select a monitored contact method, verify that messages reach an authorized person, define how privacy requests and corrections will be handled, and publish the owner-approved channel here and in the privacy notice. No contact details are published until the operator supplies and tests them.</p>
-  <p>This site is currently a demonstration. Do not send sensitive, financial, tax, or identity documents through this site.</p>
+  <p>For general questions, privacy requests, corrections, or affiliate inquiries, email <a href={PUBLIC_CONTACT_MAILTO}>{PUBLIC_CONTACT_EMAIL}</a>.</p>
+  <p>The owner reports testing this address for sending and receiving. This page is not a contact form and does not automatically collect visitor information.</p>
+  <p>This site is currently a demonstration. Do not send sensitive, financial, tax, or identity documents by email.</p>
 </BaseLayout>

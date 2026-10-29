@@ -1,10 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_MAILTO } from '../lib/contact';
 ---
 <BaseLayout title="Privacy Notice | GearPilot AI" description="The current privacy posture of the GearPilot AI demonstration site." canonicalPath="/privacy/">
   <h1>Privacy notice — demonstration site</h1>
   <p>This demonstration site has no accounts, submissions, newsletter, first-party analytics, or analytics script. The finder runs in your browser using the bundled demonstration catalog. The site does not intentionally set first-party tracking cookies, fingerprint visitors, or measure affiliate clicks.</p>
-  <p>Cloudflare Workers hosts the static site. The hosting provider may process request and security data to deliver the service under its own terms. GearPilot AI has not configured an analytics product, verified hosting log retention settings, or established a public privacy-request channel.</p>
+  <p>Cloudflare Workers hosts the static site. The hosting provider may process request and security data to deliver the service under its own terms. GearPilot AI has not configured an analytics product or verified hosting log retention settings.</p>
   <p>The catalog is synthetic demonstration data, and no purchase or affiliate tracking links are active. This notice describes the current application behavior; it is not a complete legal privacy program or a promise about infrastructure-level processing.</p>
-  <p>Before public launch, the site owner must publish a monitored contact method and verify the actual hosting, analytics, retention, data-sharing, and rights-handling configuration.</p>
+  <p>For privacy questions, requests, or corrections, email <a href={PUBLIC_CONTACT_MAILTO}>{PUBLIC_CONTACT_EMAIL}</a>. The site has no contact form and does not automatically collect an email address. If you choose to email, your message is handled through your and the recipient's email providers; do not include sensitive information. The owner reports testing the address for sending and receiving.</p>
+  <p>The site owner must still verify the actual hosting, analytics, retention, data-sharing, and rights-handling configuration before a commercial launch.</p>
 </BaseLayout>
