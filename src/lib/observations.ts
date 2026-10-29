@@ -45,9 +45,22 @@ export function prepareObservationIngestion(
   const merged = ObservationCollectionSchema.parse({
     lastUpdatedAt: ingestedAt,
     observations: [...parsedExisting.observations, ...parsedIncoming.observations],
-    candidateAssessments: parsedExisting.candidateAssessments,
+    candidateAssessments: [
+      ...parsedExisting.candidateAssessments.filter((existingAssessment) => (
+        !parsedIncoming.candidateAssessments.some((assessment) => assessment.productId === existingAssessment.productId)
+      )),
+      ...parsedIncoming.candidateAssessments,
+    ],
     reviewEvents: parsedExisting.reviewEvents,
   });
+  const existingAssessments = new Map(parsedExisting.candidateAssessments.map((assessment) => [assessment.productId, assessment]));
+  if (parsedIncoming.candidateAssessments.some((assessment) => {
+    const previous = existingAssessments.get(assessment.productId);
+    return Date.parse(assessment.assessedAt) > ingestedAtMs
+      || (previous !== undefined && Date.parse(assessment.assessedAt) < Date.parse(previous.assessedAt));
+  })) {
+    throw new Error('Candidate assessment updates must not be future-dated or older than the existing assessment');
+  }
   const referenceErrors = validateObservationReferences(merged, products);
   const duplicates = findDuplicateObservations(merged.observations);
   const conflicts = findConflictingObservations(merged.observations);
@@ -143,12 +156,20 @@ export function findConflictingObservations(observations: CommercialObservation[
 
 export function validateObservationReferences(collection: ObservationCollection, products: Product[]): string[] {
   const productById = new Map(products.map((product) => [product.id, product]));
+  const assessmentByProductId = new Map(collection.candidateAssessments.map((assessment) => [assessment.productId, assessment]));
   const errors: string[] = [];
   collection.observations.forEach((observation) => {
     const product = productById.get(observation.productId);
     if (!product) errors.push(`Observation ${observation.id} references missing product ${observation.productId}.`);
     else if (product.manufacturer.trim().toLowerCase() !== observation.manufacturer.trim().toLowerCase()) errors.push(`Observation ${observation.id} conflicts with the product manufacturer.`);
     else if (product.model.trim().toLowerCase() !== observation.configuration.exactModel.trim().toLowerCase()) errors.push(`Observation ${observation.id} conflicts with the product model/configuration reference.`);
+    const assessmentConfiguration = assessmentByProductId.get(observation.productId)?.exactConfiguration;
+    if (product
+      && product.model.trim().toLowerCase() === observation.configuration.exactModel.trim().toLowerCase()
+      && assessmentConfiguration
+      && !sameProductConfiguration(observation.configuration, assessmentConfiguration)) {
+      errors.push(`Observation ${observation.id} does not match the candidate's assessed exact configuration.`);
+    }
   });
   collection.candidateAssessments.forEach((assessment) => {
     const product = productById.get(assessment.productId);
@@ -156,6 +177,21 @@ export function validateObservationReferences(collection: ObservationCollection,
     else if (product.manufacturer.trim().toLowerCase() !== assessment.manufacturer.trim().toLowerCase()) errors.push(`Assessment for ${assessment.productId} conflicts with the product manufacturer.`);
   });
   return errors;
+}
+
+function sameProductConfiguration(
+  left: CommercialObservation['configuration'],
+  right: NonNullable<ObservationCollection['candidateAssessments'][number]['exactConfiguration']>,
+): boolean {
+  const leftOptions = Object.entries(left.selectedOptions).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+  const rightOptions = Object.entries(right.selectedOptions).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+  return left.id === right.id
+    && left.label === right.label
+    && left.exactModel === right.exactModel
+    && left.sku === right.sku
+    && left.desktopWidthInches === right.desktopWidthInches
+    && left.desktopDepthInches === right.desktopDepthInches
+    && JSON.stringify(leftOptions) === JSON.stringify(rightOptions);
 }
 
 export type CatalogQualityReport = {

@@ -95,6 +95,64 @@ describe('human editorial decision workflow', () => {
     expect(collection.observations).toHaveLength(2);
   });
 
+  it('ingests an exact configuration assessment alongside evidence and rejects variant mismatches', () => {
+    const observedAt = '2026-10-29T05:10:00.000Z';
+    const observation = {
+      ...collectedCollection.observations[0]!,
+      id: 'vari-essential-401512-recheck',
+      observedAt,
+      evidenceNotes: 'Fresh evidence captured for workflow testing only.',
+    };
+    const updatedAssessment = {
+      ...collection.candidateAssessments.find((assessment) => assessment.productId === observation.productId)!,
+      assessedAt: observedAt,
+      notes: 'Configuration recorded for workflow testing only.',
+    };
+    const incoming = ObservationCollectionSchema.parse({
+      lastUpdatedAt: observedAt,
+      observations: [observation],
+      candidateAssessments: [updatedAssessment],
+      reviewEvents: [],
+    });
+    const ingested = prepareObservationIngestion(collection, incoming, catalog.products, 'Evidence collector', '2026-10-29T05:15:00.000Z', reviewNow);
+    expect(ingested.candidateAssessments.find((assessment) => assessment.productId === observation.productId)).toEqual(updatedAssessment);
+    expect(ingested.observations.at(-1)?.reviewStatus).toBe('pending_review');
+
+    const mismatchedObservation = {
+      ...observation,
+      configuration: { ...observation.configuration, id: 'vari-essential-other-variant' },
+    };
+    const mismatched = ObservationCollectionSchema.parse({
+      ...incoming,
+      observations: [mismatchedObservation],
+    });
+    expect(() => prepareObservationIngestion(collection, mismatched, catalog.products, 'Evidence collector', '2026-10-29T05:15:00.000Z', reviewNow)).toThrow(/assessed exact configuration/);
+
+    const sameIdWrongOptions = ObservationCollectionSchema.parse({
+      ...incoming,
+      observations: [{
+        ...observation,
+        configuration: {
+          ...observation.configuration,
+          selectedOptions: { ...observation.configuration.selectedOptions, finish: 'Different finish' },
+        },
+      }],
+    });
+    expect(() => prepareObservationIngestion(collection, sameIdWrongOptions, catalog.products, 'Evidence collector', '2026-10-29T05:15:00.000Z', reviewNow)).toThrow(/assessed exact configuration/);
+
+    const futureAssessment = ObservationCollectionSchema.parse({
+      ...incoming,
+      candidateAssessments: [{ ...updatedAssessment, assessedAt: '2026-10-29T05:16:00.000Z' }],
+    });
+    expect(() => prepareObservationIngestion(collection, futureAssessment, catalog.products, 'Evidence collector', '2026-10-29T05:15:00.000Z', reviewNow)).toThrow(/future-dated/);
+
+    const staleAssessment = ObservationCollectionSchema.parse({
+      ...incoming,
+      candidateAssessments: [{ ...updatedAssessment, assessedAt: '2026-10-29T05:04:00.000Z' }],
+    });
+    expect(() => prepareObservationIngestion(collection, staleAssessment, catalog.products, 'Evidence collector', '2026-10-29T05:15:00.000Z', reviewNow)).toThrow(/older than the existing assessment/);
+  });
+
   it('rejects mismatched collectors, duplicate evidence, conflicting evidence, and pre-reviewed ingestion', () => {
     const observedAt = '2026-10-29T05:10:00.000Z';
     const incomingObservation = {
