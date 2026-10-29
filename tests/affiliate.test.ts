@@ -13,6 +13,7 @@ const registry = AffiliateRegistrySchema.parse(registryData);
 const verifiedProduct = ProductSchema.parse({
   ...candidates.products[0],
   dataStatus: 'verified',
+  configuration: { id: configurationId, label: 'Synthetic verified-test Branch Duo 48x24', exactModel: 'Duo Standing Desk', sku: 'TEST-ONLY', desktopWidthInches: 48, desktopDepthInches: 24, selectedOptions: { desktop: '48x24' } },
   specificationReferences: Object.fromEntries(Object.entries(candidates.products[0]!.specificationReferences).map(([key, reference]) => [key, { ...reference, status: 'verified' }])),
   editorialApproval: { collector: 'Product evidence collector', reviewer: 'Independent product reviewer', reviewedAt: now.toISOString(), sourceIds: candidates.products[0]!.sources.map((source) => source.id) },
 });

@@ -1,0 +1,41 @@
+---
+import type { PublicProductProfile } from '../lib/product-profile';
+
+interface Props {
+  profile: PublicProductProfile;
+}
+
+const { profile } = Astro.props;
+---
+<article class="card" aria-labelledby={`product-${profile.id}`}>
+  <h2 id={`product-${profile.id}`}>{profile.brand} {profile.model}</h2>
+  <p>Informational product profile · {profile.market} market · no purchase offer</p>
+
+  <h3>Verified configuration</h3>
+  <p>{profile.configuration.label} ({profile.configuration.exactModel})</p>
+  {profile.configuration.sku && <p>SKU: {profile.configuration.sku}</p>}
+  <ul>
+    {Object.entries(profile.configuration.selectedOptions).map(([name, value]) => <li>{name}: {value}</li>)}
+  </ul>
+
+  <h3>Manufacturer-sourced specifications</h3>
+  <dl>
+    {profile.specifications.map((specification) => (
+      <>
+        <dt>{specification.label}</dt>
+        <dd>{specification.value} <a href={specification.sourceUrl} rel="noopener noreferrer" target="_blank">Source (observed {specification.verifiedAt})</a></dd>
+      </>
+    ))}
+  </dl>
+
+  <h3>Policy limitations</h3>
+  <p>Warranty: {profile.warranty}</p>
+  <p>Returns: {profile.returns}</p>
+  <p>Price, shipping, and availability: UNKNOWN and not asserted by this product-only profile.</p>
+
+  <h3>Evidence and review</h3>
+  <ul>
+    {profile.sources.map((source) => <li><a href={source.url} rel="noopener noreferrer" target="_blank">{source.url}</a> (observed {source.observedAt})</li>)}
+  </ul>
+  <p>Independent editorial review recorded {profile.editorialReview.reviewedAt}. No hands-on testing or review score is claimed.</p>
+</article>
