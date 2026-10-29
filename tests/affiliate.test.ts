@@ -6,10 +6,14 @@ import { AVAILABILITY_FRESHNESS_MS, PRICE_FRESHNESS_MS } from '../src/lib/eligib
 import { AffiliateProgramSchema, AffiliateRegistrySchema, OfferSchema, ProductSchema } from '../src/lib/schema';
 
 const now = new Date('2026-10-29T00:00:00Z');
+const configurationId = 'branch-duo-48x24-test';
+const reviewEvidence = { evidenceNotes: 'Approved test fixture.', evidenceQuality: 'primary' as const, reviewStatus: 'approved' as const, reviewer: 'Test reviewer', reviewedAt: now.toISOString(), sourceMetadata: {} };
 const registry = AffiliateRegistrySchema.parse(registryData);
 const verifiedProduct = ProductSchema.parse({ ...candidates.products[0], dataStatus: 'verified' });
+const priceObservation = (overrides: Record<string, unknown> = {}) => ({ configurationId, priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), mandatoryShippingCents: 0, shippingStatus: 'free', ...reviewEvidence, ...overrides });
+const availabilityObservation = (overrides: Record<string, unknown> = {}) => ({ configurationId, availability: 'in_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), ...reviewEvidence, ...overrides });
 const verifiedOffer = (overrides: Record<string, unknown> = {}) => OfferSchema.parse({
-  id: 'branch-duo-affiliate', productId: verifiedProduct.id, retailer: 'Branch', market: 'US', dataStatus: 'verified', currency: 'USD', priceCents: 49900, mandatoryShippingCents: 0, priceVerifiedAt: '2026-10-29T00:00:00Z', priceObservations: [{ priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: '2026-10-29T00:00:00Z', mandatoryShippingCents: 0 }], availability: 'in_stock', availabilityObservedAt: '2026-10-29T00:00:00Z', availabilityObservations: [{ availability: 'in_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: '2026-10-29T00:00:00Z' }], affiliateProgramStatus: 'approved', affiliateProgramId: 'branch', affiliateUrl: 'https://shop.branchfurniture.com/products/duo', sourceUrls: ['https://www.branchfurniture.com/products/duo-standing-desk'], reviewNotes: null, lastUpdatedAt: '2026-10-29T00:00:00Z', ...overrides,
+  id: 'branch-duo-affiliate', productId: verifiedProduct.id, retailer: 'Branch', configurationId, market: 'US', dataStatus: 'verified', currency: 'USD', priceCents: 49900, mandatoryShippingCents: 0, priceVerifiedAt: now.toISOString(), priceObservations: [priceObservation()], availability: 'in_stock', availabilityObservedAt: now.toISOString(), availabilityObservations: [availabilityObservation()], affiliateProgramStatus: 'approved', affiliateProgramId: 'branch', affiliateUrl: 'https://shop.branchfurniture.com/products/duo', sourceUrls: ['https://www.branchfurniture.com/products/duo-standing-desk'], reviewNotes: null, lastUpdatedAt: now.toISOString(), ...overrides,
 });
 const approvedProgram = (overrides: Record<string, unknown> = {}) => AffiliateProgramSchema.parse({
   id: 'branch', merchantName: 'Branch', officialWebsite: 'https://www.branchfurniture.com/', applicationUrl: null, programName: 'Branch partner program', networkName: null, allowedRegions: ['US'], approvedDestinationDomains: ['branchfurniture.com'], approvalEvidence: { reference: 'credential-ref:affiliate/branch/approval-record', reviewedAt: '2026-10-29T00:00:00Z' }, approvalDate: '2026-10-29T00:00:00Z', trackingIdReference: 'credential-ref:affiliate/branch/tracking-id', status: 'approved', expiresAt: null, reviewNotes: 'Test fixture only; no real approval is asserted.', lastReviewedAt: '2026-10-29T00:00:00Z', ...overrides,
@@ -53,10 +57,12 @@ describe('affiliate registry and resolver', () => {
   });
   it.each([
     ['missing price observation', { priceObservations: [] }],
-    ['missing mandatory shipping', { mandatoryShippingCents: null, priceObservations: [{ priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), mandatoryShippingCents: null }] }],
+    ['missing mandatory shipping', { mandatoryShippingCents: null, priceObservations: [priceObservation({ mandatoryShippingCents: null, shippingStatus: 'unknown' })] }],
     ['missing stock observation', { availabilityObservations: [] }],
-    ['invalid price observation', { priceObservations: [{ priceCents: 49899, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), mandatoryShippingCents: 0 }] }],
-    ['invalid stock observation', { availabilityObservations: [{ availability: 'out_of_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString() }] }],
+    ['invalid price observation', { priceObservations: [priceObservation({ priceCents: 49899 })] }],
+    ['invalid stock observation', { availabilityObservations: [availabilityObservation({ availability: 'out_of_stock' })] }],
+    ['unreviewed price observation', { priceObservations: [priceObservation({ reviewStatus: 'pending_review', reviewer: null, reviewedAt: null })] }],
+    ['unreviewed stock observation', { availabilityObservations: [availabilityObservation({ reviewStatus: 'pending_review', reviewer: null, reviewedAt: null })] }],
   ])('blocks an approved but ineligible offer with %s', (_label, overrides) => {
     const offer = verifiedOffer();
     Object.assign(offer, overrides);
@@ -66,12 +72,12 @@ describe('affiliate registry and resolver', () => {
     const stalePriceAt = new Date(now.getTime() - PRICE_FRESHNESS_MS - 1).toISOString();
     const stalePrice = verifiedOffer({
       priceVerifiedAt: stalePriceAt,
-      priceObservations: [{ priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: stalePriceAt, mandatoryShippingCents: 0 }],
+      priceObservations: [priceObservation({ observedAt: stalePriceAt, reviewedAt: stalePriceAt })],
     });
     const staleStockAt = new Date(now.getTime() - AVAILABILITY_FRESHNESS_MS - 1).toISOString();
     const staleStock = verifiedOffer({
       availabilityObservedAt: staleStockAt,
-      availabilityObservations: [{ availability: 'in_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: staleStockAt }],
+      availabilityObservations: [availabilityObservation({ observedAt: staleStockAt, reviewedAt: staleStockAt })],
     });
     expect(resolveAffiliateLink(verifiedProduct, stalePrice, [approvedProgram()], now)).toBeNull();
     expect(resolveAffiliateLink(verifiedProduct, staleStock, [approvedProgram()], now)).toBeNull();

@@ -1,6 +1,6 @@
-import type { Offer, Product } from './schema';
-import { isVerifiedOfferEligible } from './eligibility';
-export { AVAILABILITY_FRESHNESS_MS, isAvailabilityFresh, isPriceFresh, PRICE_FRESHNESS_MS } from './eligibility';
+import type { Offer, Product } from './schema.ts';
+import { isVerifiedOfferEligible } from './eligibility.ts';
+export { AVAILABILITY_FRESHNESS_MS, isAvailabilityFresh, isPriceFresh, PRICE_FRESHNESS_MS } from './eligibility.ts';
 
 export type Preference = 'value' | 'quality' | 'workspace_fit';
 export type Workspace = 'compact' | 'standard' | 'large';

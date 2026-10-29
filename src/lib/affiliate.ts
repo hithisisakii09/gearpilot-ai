@@ -1,6 +1,6 @@
-import type { AffiliateProgram, Offer, Product } from './schema';
-import { isCanonicalHttpsHostname } from './schema';
-import { isVerifiedOfferEligible } from './eligibility';
+import type { AffiliateProgram, Offer, Product } from './schema.ts';
+import { isCanonicalHttpsHostname } from './schema.ts';
+import { isVerifiedOfferEligible } from './eligibility.ts';
 
 export type AffiliateLink = { href: string; rel: 'sponsored nofollow noopener noreferrer' };
 
