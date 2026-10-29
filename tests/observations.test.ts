@@ -51,7 +51,7 @@ const manufacturerObservation = ManufacturerProductObservationSchema.parse({
 const branchAssessment = {
   ...collection.candidateAssessments.find((assessment) => assessment.productId === branchProduct.id)!,
   exactConfiguration: branchConfiguration,
-  assessedAt: '2026-10-29T17:12:00Z',
+  assessedAt: '2026-10-29T18:10:00.000Z',
   priceStatus: 'observed' as const,
   shippingStatus: 'unknown' as const,
   availability: 'in_stock' as const,
@@ -113,7 +113,7 @@ describe('manufacturer-only observation contracts', () => {
 
     it('requires an exact assessment, official source, and matching product configuration for intake', () => {
       const incoming = ObservationCollectionSchema.parse({
-        lastUpdatedAt: '2026-10-29T17:20:00.000Z',
+        lastUpdatedAt: '2026-10-29T18:15:00.000Z',
         observations: [manufacturerObservation],
         candidateAssessments: [branchAssessment],
         reviewEvents: [],
@@ -123,8 +123,8 @@ describe('manufacturer-only observation contracts', () => {
         incoming,
         catalog.products,
         'akhil',
-        '2026-10-29T17:20:00.000Z',
-        new Date('2026-10-29T17:20:00Z'),
+        '2026-10-29T18:15:00.000Z',
+        new Date('2026-10-29T18:15:00Z'),
       );
       expect(merged.observations.at(-1)).toMatchObject({ reviewStatus: 'pending_review', reviewer: null });
       expect(merged.candidateAssessments.find((assessment) => assessment.productId === branchProduct.id)?.exactConfiguration).toEqual(branchConfiguration);
@@ -135,22 +135,22 @@ describe('manufacturer-only observation contracts', () => {
       expect(() => prepareObservationIngestion(withoutBranchAssessment, ObservationCollectionSchema.parse({
         ...incoming,
         candidateAssessments: [],
-      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow(/requires an exact candidate assessment/);
+      }), catalog.products, 'akhil', '2026-10-29T18:15:00.000Z', new Date('2026-10-29T18:15:00.000Z'))).toThrow(/requires an exact candidate assessment/);
       expect(() => prepareObservationIngestion(collection, ObservationCollectionSchema.parse({
         ...incoming,
         observations: [{ ...manufacturerObservation, configuration: { ...branchConfiguration, desktopWidthInches: 48 } }],
-      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow(/assessed exact configuration/);
+      }), catalog.products, 'akhil', '2026-10-29T18:15:00.000Z', new Date('2026-10-29T18:15:00.000Z'))).toThrow(/assessed exact configuration/);
       expect(() => prepareObservationIngestion(collection, ObservationCollectionSchema.parse({
         ...incoming,
         observations: [{ ...manufacturerObservation, sourceUrl: 'https://example.com/product' }],
-      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow();
+      }), catalog.products, 'akhil', '2026-10-29T18:15:00.000Z', new Date('2026-10-29T18:15:00.000Z'))).toThrow();
       expect(() => prepareObservationIngestion(collection, ObservationCollectionSchema.parse({
         ...incoming,
         candidateAssessments: [{
           ...branchAssessment,
           sourceUrls: ['https://example.com/product'],
         }],
-      }), catalog.products, 'akhil', '2026-10-29T17:20:00.000Z', new Date('2026-10-29T17:20:00.000Z'))).toThrow(/candidate assessment must cite/);
+      }), catalog.products, 'akhil', '2026-10-29T18:15:00.000Z', new Date('2026-10-29T18:15:00.000Z'))).toThrow(/candidate assessment must cite/);
     });
 
     it('isolates manufacturer duplicates and conflicts from commercial freshness and offer eligibility', () => {
@@ -183,7 +183,7 @@ describe('manufacturer-only observation contracts', () => {
 
     it('supports independent evidence review without automatically verifying a product', () => {
       const pending = ObservationCollectionSchema.parse({
-        lastUpdatedAt: '2026-10-29T17:20:00.000Z',
+        lastUpdatedAt: '2026-10-29T18:15:00.000Z',
         observations: [manufacturerObservation],
         candidateAssessments: [branchAssessment],
         reviewEvents: [],
@@ -192,8 +192,8 @@ describe('manufacturer-only observation contracts', () => {
         observationId: manufacturerObservation.id,
         decision: 'approved',
         reviewer: 'Independent editorial reviewer',
-        reviewedAt: '2026-10-29T18:00:00.000Z',
-      }, new Date('2026-10-29T18:00:00.000Z'));
+        reviewedAt: '2026-10-29T18:30:00.000Z',
+      }, new Date('2026-10-29T18:30:00.000Z'));
       expect(reviewed.observations[0]).toMatchObject({ reviewStatus: 'approved', reviewer: 'Independent editorial reviewer' });
       expect(reviewed.reviewEvents).toHaveLength(1);
       expect(branchProduct.dataStatus).toBe('partially_verified');
@@ -202,8 +202,8 @@ describe('manufacturer-only observation contracts', () => {
         observationId: manufacturerObservation.id,
         decision: 'approved',
         reviewer: 'akhil',
-        reviewedAt: '2026-10-29T18:00:00.000Z',
-      }, new Date('2026-10-29T18:00:00.000Z'))).toThrow(/different from the evidence collector/);
+        reviewedAt: '2026-10-29T18:30:00.000Z',
+      }, new Date('2026-10-29T18:30:00.000Z'))).toThrow(/different from the evidence collector/);
     });
 });
 
