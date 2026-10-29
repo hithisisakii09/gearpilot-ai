@@ -3,14 +3,14 @@ import candidates from '../src/data/candidates.json';
 import demo from '../src/data/demo.json';
 import { getApprovedAffiliateLink } from '../src/lib/affiliate';
 import { AVAILABILITY_FRESHNESS_MS, PRICE_FRESHNESS_MS, recommend, type Criteria } from '../src/lib/recommend';
-import { CatalogSchema, OfferSchema } from '../src/lib/schema';
+import { CatalogSchema, OfferSchema, PriceObservationSchema } from '../src/lib/schema';
 import { kilogramsToPounds, millimetresToInches } from '../src/lib/units';
 
 const demoCatalog = CatalogSchema.parse(demo);
 const candidateCatalog = CatalogSchema.parse(candidates);
 const now = new Date('2026-10-29T00:00:00Z');
 const configurationId = 'branch-duo-48x24-test';
-const reviewEvidence = { evidenceNotes: 'Approved test fixture.', evidenceQuality: 'primary' as const, reviewStatus: 'approved' as const, reviewer: 'Test reviewer', reviewedAt: now.toISOString(), sourceMetadata: {} };
+const reviewEvidence = { evidenceNotes: 'Approved test fixture.', evidenceQuality: 'primary' as const, reviewStatus: 'approved' as const, collectedBy: 'Evidence collector', reviewer: 'Test reviewer', reviewedAt: now.toISOString(), sourceMetadata: {} };
 const criteria: Criteria = { budgetCents: 50000, minDesktopWidthInches: 48, minDesktopDepthInches: 24, targetMinHeightInches: 28, targetMaxHeightInches: 47, minLiftCapacityLbs: 150, electricRequired: true, workspace: 'standard', preference: 'value', market: 'US', now };
 
 function priceObservation(overrides: Record<string, unknown> = {}) {
@@ -21,13 +21,25 @@ function availabilityObservation(overrides: Record<string, unknown> = {}) {
 }
 
 function verifiedProduct() {
-  const product = structuredClone(candidateCatalog.products[0]!);
-  product.dataStatus = 'verified';
-  return product;
+  const product = candidateCatalog.products[0]!;
+  return CatalogSchema.shape.products.element.parse({
+    ...product,
+    dataStatus: 'verified',
+    specificationReferences: Object.fromEntries(Object.entries(product.specificationReferences).map(([key, reference]) => [key, { ...reference, status: 'verified' }])),
+    editorialApproval: { collector: 'Product evidence collector', reviewer: 'Independent product reviewer', reviewedAt: now.toISOString(), sourceIds: product.sources.map((source) => source.id) },
+  });
+}
+function policyEvidence() {
+  return {
+    configurationId,
+    sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk',
+    observedAt: now.toISOString(),
+    ...reviewEvidence,
+  };
 }
 function verifiedOffer(overrides: Record<string, unknown> = {}) {
   return OfferSchema.parse({
-    id: 'branch-duo-direct', productId: 'branch-duo-standing-desk', retailer: 'Branch', configurationId, market: 'US', dataStatus: 'verified', currency: 'USD', priceCents: 49900, mandatoryShippingCents: 0, priceVerifiedAt: now.toISOString(), priceObservations: [priceObservation()], availability: 'in_stock', availabilityObservedAt: now.toISOString(), availabilityObservations: [availabilityObservation()], affiliateProgramStatus: 'unavailable', sourceUrls: ['https://www.branchfurniture.com/products/duo-standing-desk'], reviewNotes: null, lastUpdatedAt: now.toISOString(), ...overrides,
+    id: 'branch-duo-direct', productId: 'branch-duo-standing-desk', retailer: 'Branch', configurationId, market: 'US', dataStatus: 'verified', currency: 'USD', priceCents: 49900, mandatoryShippingCents: 0, priceVerifiedAt: now.toISOString(), priceObservations: [priceObservation()], availability: 'in_stock', availabilityObservedAt: now.toISOString(), availabilityObservations: [availabilityObservation()], warrantyEvidence: policyEvidence(), returnPolicyEvidence: policyEvidence(), affiliateProgramStatus: 'unavailable', sourceUrls: ['https://www.branchfurniture.com/products/duo-standing-desk'], reviewNotes: null, lastUpdatedAt: now.toISOString(), ...overrides,
   });
 }
 
@@ -40,6 +52,12 @@ describe('catalog contracts and ingestion', () => {
   it('rejects a verified product without official provenance', () => {
     const invalid = structuredClone(demo); invalid.products[0]!.dataStatus = 'verified';
     expect(() => CatalogSchema.parse(invalid)).toThrow(/official manufacturer URL/);
+  });
+  it('requires independent product approval and verified identity/specification sources', () => {
+    const product = verifiedProduct();
+    expect(() => CatalogSchema.shape.products.element.parse({ ...product, editorialApproval: null })).toThrow(/independent editorial approval/);
+    expect(() => CatalogSchema.shape.products.element.parse({ ...product, editorialApproval: { ...product.editorialApproval!, collector: 'Same person', reviewer: 'Same person' } })).toThrow(/independent from the evidence collector/);
+    expect(() => CatalogSchema.shape.products.element.parse({ ...product, specificationReferences: { ...product.specificationReferences, identity: { ...product.specificationReferences.identity!, status: 'partially_verified' } } })).toThrow(/independently verified identity/);
   });
   it('rejects duplicate product IDs and offers that reference missing products', () => {
     const duplicate = structuredClone(demo); duplicate.products.push(structuredClone(duplicate.products[0]!));
@@ -57,6 +75,17 @@ describe('catalog contracts and ingestion', () => {
   it('requires price and stock timestamps for non-demo observed values', () => {
     expect(() => OfferSchema.parse({ ...verifiedOffer(), priceVerifiedAt: null })).toThrow(/Known prices require an observation timestamp/);
     expect(() => OfferSchema.parse({ ...verifiedOffer(), availabilityObservedAt: null })).toThrow(/Known availability requires an observation timestamp/);
+  });
+  it('requires exact-configuration independently reviewed warranty and return evidence for verified offers', () => {
+    const offer = verifiedOffer();
+    expect(() => OfferSchema.parse({ ...offer, warrantyEvidence: null })).toThrow(/reviewed warranty evidence/);
+    expect(() => OfferSchema.parse({ ...offer, returnPolicyEvidence: { ...offer.returnPolicyEvidence!, configurationId: 'different-configuration' } })).toThrow(/match the exact offer configuration/);
+    expect(() => OfferSchema.parse({ ...offer, warrantyEvidence: { ...offer.warrantyEvidence!, collectedBy: 'Same person', reviewer: 'Same person' } })).toThrow(/independent from the evidence collector/);
+  });
+  it('requires a named evidence collector distinct from the reviewer for approved price evidence', () => {
+    expect(() => PriceObservationSchema.parse(priceObservation({ collectedBy: null }))).toThrow(/named collector/);
+    expect(() => PriceObservationSchema.parse(priceObservation({ collectedBy: 'Test reviewer' }))).toThrow(/independent from the evidence collector/);
+    expect(() => PriceObservationSchema.parse(priceObservation({ reviewedAt: '2026-10-28T00:00:00Z' }))).toThrow(/cannot predate the evidence/);
   });
   it('converts documented units consistently without treating unknown values as zero', () => {
     expect(kilogramsToPounds(100)).toBe(220.46);
@@ -93,6 +122,20 @@ describe('recommendation eligibility and scores', () => {
     missingStockObservation.availabilityObservations = [];
     expect(recommend([product], [missingStockObservation], criteria)).toEqual([]);
     expect(recommend([product], [verifiedOffer({ priceObservations: [priceObservation({ mandatoryShippingCents: null, shippingStatus: 'unknown' })] })], criteria)).toEqual([]);
+  });
+  it('blocks recommendation when required policy evidence is absent, unreviewed, or for another configuration', () => {
+    const product = verifiedProduct();
+    const missing = verifiedOffer();
+    Object.assign(missing, { warrantyEvidence: null });
+    expect(recommend([product], [missing], criteria)).toEqual([]);
+
+    const pending = verifiedOffer();
+    Object.assign(pending, { returnPolicyEvidence: { ...pending.returnPolicyEvidence!, reviewStatus: 'pending_review', reviewer: null, reviewedAt: null } });
+    expect(recommend([product], [pending], criteria)).toEqual([]);
+
+    const mismatched = verifiedOffer();
+    Object.assign(mismatched, { warrantyEvidence: { ...mismatched.warrantyEvidence!, configurationId: 'other-configuration' } });
+    expect(recommend([product], [mismatched], criteria)).toEqual([]);
   });
   it('does not treat missing specifications or shipping as a hard-filter pass', () => {
     const product = verifiedProduct(); product.specifications!.desktopDepthInches = undefined;
