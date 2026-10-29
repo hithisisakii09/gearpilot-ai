@@ -3,7 +3,8 @@
 - [x] Branch is based on merged Phase 3.1 `origin/main`.
 - [x] Registry models all required lifecycle statuses and excludes credentials/secrets from Git.
 - [x] All eight merchant records are explicitly `not_applied`; no approval, program, network, or application claim is fabricated.
-- [x] Resolver requires verification, approval evidence, credential reference, HTTPS, merchant matching, active status, US region, and destination allowlisting.
+- [x] Resolver reuses the recommendation evidence gate and requires current matching price, mandatory-shipping, and in-stock observations before any referral link can activate.
+- [x] Resolver requires verification, approval evidence, credential reference, HTTPS, merchant matching, active status, US region, and canonical destination-host allowlisting.
 - [x] Sponsored links receive `sponsored nofollow noopener noreferrer`; non-approved links are blocked.
 - [x] Commission/referral information remains outside recommendation scoring.
 - [x] Click measurement is intentionally absent; privacy disclosure states this.

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import registryData from '../src/data/affiliate-programs.json';
 import candidates from '../src/data/candidates.json';
 import { resolveAffiliateLink } from '../src/lib/affiliate';
+import { AVAILABILITY_FRESHNESS_MS, PRICE_FRESHNESS_MS } from '../src/lib/eligibility';
 import { AffiliateProgramSchema, AffiliateRegistrySchema, OfferSchema, ProductSchema } from '../src/lib/schema';
 
 const now = new Date('2026-10-29T00:00:00Z');
@@ -27,6 +28,19 @@ describe('affiliate registry and resolver', () => {
   it('rejects an approved program missing a tracking-ID reference', () => {
     expect(() => approvedProgram({ trackingIdReference: null })).toThrow(/credential reference/);
   });
+  it.each([
+    '',
+    '*.branchfurniture.com',
+    'https://branchfurniture.com',
+    '127.0.0.1',
+    'localhost',
+    'BranchFurniture.com',
+    'branchfurniture.com.',
+    ' branchfurniture.com',
+    'branchfurniture..com',
+  ])('rejects a non-canonical or ambiguous destination domain: %j', (domain) => {
+    expect(() => approvedProgram({ approvedDestinationDomains: [domain] })).toThrow(/canonical HTTPS hostname/);
+  });
   it('blocks destinations outside the program allowlist and merchant mismatches', () => {
     const program = approvedProgram();
     expect(resolveAffiliateLink(verifiedProduct, verifiedOffer({ affiliateUrl: 'https://evil.example/path' }), [program], now)).toBeNull();
@@ -36,6 +50,31 @@ describe('affiliate registry and resolver', () => {
     const program = approvedProgram();
     expect(resolveAffiliateLink({ ...verifiedProduct, dataStatus: 'demo' }, verifiedOffer(), [program], now)).toBeNull();
     expect(resolveAffiliateLink(verifiedProduct, verifiedOffer({ dataStatus: 'partially_verified' }), [program], now)).toBeNull();
+  });
+  it.each([
+    ['missing price observation', { priceObservations: [] }],
+    ['missing mandatory shipping', { mandatoryShippingCents: null, priceObservations: [{ priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), mandatoryShippingCents: null }] }],
+    ['missing stock observation', { availabilityObservations: [] }],
+    ['invalid price observation', { priceObservations: [{ priceCents: 49899, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), mandatoryShippingCents: 0 }] }],
+    ['invalid stock observation', { availabilityObservations: [{ availability: 'out_of_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString() }] }],
+  ])('blocks an approved but ineligible offer with %s', (_label, overrides) => {
+    const offer = verifiedOffer();
+    Object.assign(offer, overrides);
+    expect(resolveAffiliateLink(verifiedProduct, offer, [approvedProgram()], now)).toBeNull();
+  });
+  it('blocks approved offers whose source observations are stale', () => {
+    const stalePriceAt = new Date(now.getTime() - PRICE_FRESHNESS_MS - 1).toISOString();
+    const stalePrice = verifiedOffer({
+      priceVerifiedAt: stalePriceAt,
+      priceObservations: [{ priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: stalePriceAt, mandatoryShippingCents: 0 }],
+    });
+    const staleStockAt = new Date(now.getTime() - AVAILABILITY_FRESHNESS_MS - 1).toISOString();
+    const staleStock = verifiedOffer({
+      availabilityObservedAt: staleStockAt,
+      availabilityObservations: [{ availability: 'in_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: staleStockAt }],
+    });
+    expect(resolveAffiliateLink(verifiedProduct, stalePrice, [approvedProgram()], now)).toBeNull();
+    expect(resolveAffiliateLink(verifiedProduct, staleStock, [approvedProgram()], now)).toBeNull();
   });
   it('returns sponsored, safe attributes only after all gates pass', () => {
     const resolved = resolveAffiliateLink(verifiedProduct, verifiedOffer(), [approvedProgram()], now);

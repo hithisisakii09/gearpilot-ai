@@ -68,10 +68,22 @@ describe('recommendation eligibility and scores', () => {
     const product = verifiedProduct();
     const current = verifiedOffer();
     expect(recommend([product], [current], criteria)).toHaveLength(1);
-    const stalePrice = verifiedOffer({ priceVerifiedAt: new Date(now.getTime() - PRICE_FRESHNESS_MS - 1).toISOString() });
+    const stalePriceAt = new Date(now.getTime() - PRICE_FRESHNESS_MS - 1).toISOString();
+    const stalePrice = verifiedOffer({ priceVerifiedAt: stalePriceAt, priceObservations: [{ priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: stalePriceAt, mandatoryShippingCents: 0 }] });
     expect(recommend([product], [stalePrice], criteria)).toEqual([]);
-    const staleStock = verifiedOffer({ availabilityObservedAt: new Date(now.getTime() - AVAILABILITY_FRESHNESS_MS - 1).toISOString() });
+    const staleStockAt = new Date(now.getTime() - AVAILABILITY_FRESHNESS_MS - 1).toISOString();
+    const staleStock = verifiedOffer({ availabilityObservedAt: staleStockAt, availabilityObservations: [{ availability: 'in_stock', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: staleStockAt }] });
     expect(recommend([product], [staleStock], criteria)).toEqual([]);
+  });
+  it('requires matching source observations for verified price, shipping, and stock snapshots', () => {
+    const product = verifiedProduct();
+    const missingPriceObservation = verifiedOffer();
+    missingPriceObservation.priceObservations = [];
+    expect(recommend([product], [missingPriceObservation], criteria)).toEqual([]);
+    const missingStockObservation = verifiedOffer();
+    missingStockObservation.availabilityObservations = [];
+    expect(recommend([product], [missingStockObservation], criteria)).toEqual([]);
+    expect(recommend([product], [verifiedOffer({ priceObservations: [{ priceCents: 49900, currency: 'USD', seller: 'Branch', sourceUrl: 'https://www.branchfurniture.com/products/duo-standing-desk', observedAt: now.toISOString(), mandatoryShippingCents: null }] })], criteria)).toEqual([]);
   });
   it('does not treat missing specifications or shipping as a hard-filter pass', () => {
     const product = verifiedProduct(); product.specifications!.desktopDepthInches = undefined;

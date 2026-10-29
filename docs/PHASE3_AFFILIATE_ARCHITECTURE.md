@@ -13,7 +13,7 @@ Phase 3.2 adds an internal, Git-reviewable affiliate-program registry. It does n
 - program name and US-region applicability;
 - a non-secret approval-evidence reference and approval date;
 - a `credential-ref:` reference to a separately stored tracking identifier, never the identifier itself;
-- at least one approved destination domain.
+- at least one approved destination domain, stored as a canonical lowercase DNS hostname (no scheme, path, port, wildcard, IP address, or single-label name).
 
 The actual credential belongs in a merchant-approved secrets system or affiliate network dashboard. It must not be committed to the repository, source map, static page, or test fixture.
 
@@ -21,16 +21,16 @@ The actual credential belongs in a merchant-approved secrets system or affiliate
 
 `resolveAffiliateLink()` is the only link resolver used by the rendered finder. It returns `null` unless:
 
-1. product and offer are both `verified` and the offer is in stock;
+1. product and offer are both `verified`, with a current price and mandatory-shipping observation (seven days) plus a current in-stock observation (three days); the observed snapshots, source timestamps, and currencies must match;
 2. the offer identifies an approved registry program and a recorded affiliate URL;
 3. merchant names match;
 4. the program has evidence, date, credential reference, US region, and has not expired;
-5. the exact URL is HTTPS and its host matches the program's allowlist.
+5. the exact URL is HTTPS, contains no user credentials, and its host matches a canonical hostname in the program allowlist.
 
 Successful results always include `rel="sponsored nofollow noopener noreferrer"`. The resolver does not generate URLs, append query parameters, derive tracking IDs, or consider commission terms. The legacy offer-only helper intentionally returns `null`.
 
 ## Recommendation and privacy boundaries
 
-Affiliate status is not an input to `recommend()`, and its deterministic score has no merchant, commission, approval, referral-fee, EPC, or cookie-duration field. Real products remain ineligible until their product and offer evidence is verified and fresh.
+Affiliate status is not an input to `recommend()`, and its deterministic score has no merchant, commission, approval, referral-fee, EPC, or cookie-duration field. Recommendations and the affiliate resolver call the same real-offer evidence gate, so a direct resolver call cannot bypass missing, invalid, or stale price, mandatory-shipping, or stock observations. The separate demo-only recommendation path remains synthetic and cannot activate an affiliate link.
 
 No outbound-click measurement is implemented. The static Workers deployment has no approved first-party measurement endpoint; adding one would require a separate privacy and infrastructure review. The site sets no affiliate-measurement cookie and sends no personal identifier or fingerprint to an analytics provider.
