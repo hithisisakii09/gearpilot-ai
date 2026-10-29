@@ -20,9 +20,24 @@ function isEligibleEvidence(product: Product, offer: Offer, now: Date): boolean 
 }
 export function recommend(products: Product[], offers: Offer[], criteria: Criteria): Recommendation[] {
   if (!Number.isInteger(criteria.budgetCents) || criteria.budgetCents <= 0) throw new Error('Budget must be a positive integer in cents');
-  if (criteria.minDesktopWidthInches <= 0) throw new Error('Minimum desktop width must be positive');
-  if (criteria.minDesktopDepthInches !== undefined && criteria.minDesktopDepthInches <= 0) throw new Error('Minimum desktop depth must be positive');
-  if (criteria.minLiftCapacityLbs !== undefined && criteria.minLiftCapacityLbs <= 0) throw new Error('Minimum lift capacity must be positive');
+  const positiveValues: Array<[string, number | undefined]> = [
+    ['Minimum desktop width', criteria.minDesktopWidthInches],
+    ['Minimum desktop depth', criteria.minDesktopDepthInches],
+    ['Minimum height', criteria.targetMinHeightInches],
+    ['Maximum height', criteria.targetMaxHeightInches],
+    ['Minimum lift capacity', criteria.minLiftCapacityLbs],
+  ];
+  for (const [label, value] of positiveValues) {
+    if (value !== undefined && (!Number.isFinite(value) || value <= 0)) throw new Error(`${label} must be a finite positive number`);
+  }
+  if (criteria.targetMinHeightInches !== undefined && criteria.targetMaxHeightInches !== undefined && criteria.targetMinHeightInches > criteria.targetMaxHeightInches) {
+    throw new Error('Minimum height must not exceed maximum height');
+  }
+  if (!Object.prototype.hasOwnProperty.call(workspaceMinimums, criteria.workspace)) throw new Error('Workspace must be a supported option');
+  if (!Object.prototype.hasOwnProperty.call(weights, criteria.preference)) throw new Error('Preference must be a supported option');
+  if (criteria.market !== 'US') throw new Error('Market must be US');
+  if (typeof criteria.electricRequired !== 'boolean') throw new Error('Electric-adjustment requirement must be boolean');
+  if (criteria.now !== undefined && (!(criteria.now instanceof Date) || !Number.isFinite(criteria.now.getTime()))) throw new Error('Current time must be a valid date');
   const now = criteria.now ?? new Date();
   const workspaceMinimum = workspaceMinimums[criteria.workspace];
   const requiredWidth = Math.max(criteria.minDesktopWidthInches, workspaceMinimum.width);

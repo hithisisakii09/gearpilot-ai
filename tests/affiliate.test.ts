@@ -50,6 +50,15 @@ describe('affiliate registry and resolver', () => {
     expect(resolveAffiliateLink(verifiedProduct, verifiedOffer({ affiliateUrl: 'https://evil.example/path' }), [program], now)).toBeNull();
     expect(resolveAffiliateLink(verifiedProduct, verifiedOffer({ retailer: 'Different merchant' }), [program], now)).toBeNull();
   });
+  it.each([
+    'http://shop.branchfurniture.com/products/duo',
+    'https://branchfurniture.com.evil.example/products/duo',
+    'https://user:password@shop.branchfurniture.com/products/duo',
+    'javascript:alert(1)',
+  ])('never resolves an unsafe affiliate destination: %s', (affiliateUrl) => {
+    const offer = { ...verifiedOffer(), affiliateUrl };
+    expect(resolveAffiliateLink(verifiedProduct, offer, [approvedProgram()], now)).toBeNull();
+  });
   it('requires verified product and offer records before monetization', () => {
     const program = approvedProgram();
     expect(resolveAffiliateLink({ ...verifiedProduct, dataStatus: 'demo' }, verifiedOffer(), [program], now)).toBeNull();

@@ -1,10 +1,12 @@
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { chromium } from 'playwright';
 
 const root = resolve(process.cwd(), 'dist');
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8' };
+const headersConfig = await readFile(join(root, '_headers'), 'utf8');
+const securityHeaders = Object.fromEntries([...headersConfig.matchAll(/^\s{2}([^:\s]+):\s*(.*?)\s*$/gm)].map((match) => [match[1].toLowerCase(), match[2]]));
 const server = createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://127.0.0.1').pathname);
@@ -14,11 +16,11 @@ const server = createServer(async (request, response) => {
     const info = await stat(path).catch(() => null);
     if (info?.isDirectory() || pathname.endsWith('/')) path = join(path, 'index.html');
     const body = await readFile(path);
-    response.writeHead(200, { 'content-type': mime[extname(path)] ?? 'application/octet-stream' });
+    response.writeHead(200, { ...securityHeaders, 'content-type': mime[extname(path)] ?? 'application/octet-stream' });
     response.end(body);
   } catch {
     const notFound = await readFile(join(root, '404.html')).catch(() => Buffer.from('Not found'));
-    response.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
+    response.writeHead(404, { ...securityHeaders, 'content-type': 'text/html; charset=utf-8' });
     response.end(notFound);
   }
 });
@@ -42,6 +44,11 @@ try {
     page.on('pageerror', (error) => errors.push(`page: ${error.message}`));
     const response = await page.goto(`${origin}/`, { waitUntil: 'networkidle' });
     if (!response?.ok()) errors.push(`homepage returned ${response?.status()}`);
+    for (const [header, expected] of [['x-content-type-options', 'nosniff'], ['x-frame-options', 'DENY'], ['referrer-policy', 'strict-origin-when-cross-origin']]) {
+      if (response?.headers()[header] !== expected) errors.push(`missing/incorrect security header ${header}`);
+    }
+    if (!response?.headers()['content-security-policy']?.includes("script-src 'self'")) errors.push('CSP does not restrict scripts to same-origin');
+    if (!response?.headers()['content-security-policy']?.includes("frame-ancestors 'none'")) errors.push('CSP does not block framing');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     if (overflow) errors.push('horizontal overflow');
     if (!await page.getByRole('heading', { name: 'Standing desk finder' }).isVisible()) errors.push('finder missing');
@@ -128,6 +135,11 @@ try {
       if (!/analytics script/i.test(pageHtml)) errors.push('privacy notice does not disclose current analytics status');
       if (/cloudflareinsights\.com|google-analytics\.com|googletagmanager\.com|plausible\.io/i.test(pageHtml)) errors.push('analytics/tracking code found despite no configured analytics');
     }
+    const unsafeNewTabs = await page.locator('a[target="_blank"]').evaluateAll((links) => links.filter((link) => {
+      const rel = (link.getAttribute('rel') ?? '').split(/\s+/);
+      return !rel.includes('noopener') || !rel.includes('noreferrer');
+    }).length);
+    if (unsafeNewTabs) errors.push(`${unsafeNewTabs} new-tab links omit noopener/noreferrer`);
     routeResults.push(...errors.map((error) => ({ route, error })));
     pageMetadata.push({ route, title, canonical, robots, schemaTypes: flattenedTypes });
   }
@@ -152,6 +164,7 @@ try {
   if (unknown?.status() !== 404 || await page.getByRole('heading', { name: 'Page not found' }).count() !== 1) routeResults.push({ route: '/not-a-real-route/', error: '404 response or custom page is missing' });
   if (await page.locator('meta[name="robots"]').getAttribute('content') !== 'noindex,follow') routeResults.push({ route: '/not-a-real-route/', error: '404 page must be noindex' });
   if (await page.locator('link[rel="canonical"]').count() !== 0) routeResults.push({ route: '/not-a-real-route/', error: '404 page must omit canonical' });
+  if (unknown?.headers()['x-content-type-options'] !== 'nosniff' || !unknown.headers()['content-security-policy']) routeResults.push({ route: '/not-a-real-route/', error: '404 response is missing security headers' });
 
   const pageLinkResults = [];
   for (const route of pageRoutes) {
@@ -163,6 +176,17 @@ try {
     }
   }
   const failures = [...results.flatMap((item) => item.errors), ...routeResults.filter((item) => item.status !== undefined && item.status !== 200).map((item) => `${item.route}: ${item.status}`), ...routeResults.filter((item) => item.error).map((item) => `${item.route}: ${item.error}`), ...pageLinkResults.filter((item) => item.status >= 400).map((item) => `${item.from} -> ${item.href}: ${item.status}`)];
+  async function filesIn(directory) {
+    const entries = await readdir(directory, { withFileTypes: true });
+    return (await Promise.all(entries.map((entry) => entry.isDirectory() ? filesIn(join(directory, entry.name)) : [join(directory, entry.name)]))).flat();
+  }
+  const protectedDataNames = new Set(['candidates.json', 'observations.json', 'affiliate-programs.json']);
+  const researchDataFiles = (await filesIn(root)).filter((file) => protectedDataNames.has(file.split(sep).at(-1))).map((file) => file.slice(root.length + 1));
+  if (researchDataFiles.length) failures.push(`research data unexpectedly emitted as root static assets: ${researchDataFiles.join(', ')}`);
+  for (const privatePath of ['/src/data/candidates.json', '/src/data/observations.json', '/src/data/affiliate-programs.json']) {
+    const response = await page.request.get(`${origin}${privatePath}`);
+    if (response.status() !== 404) failures.push(`${privatePath} unexpectedly returned ${response.status()}`);
+  }
   console.log(JSON.stringify({ viewports: results, pages: pageMetadata, schemaTypes: [...allSchemaTypes], routes: routeResults, sitemapUrls, internalLinks: pageLinkResults, failures }, null, 2));
   if (failures.length) process.exitCode = 1;
 } finally {
