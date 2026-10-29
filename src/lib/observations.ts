@@ -1,7 +1,7 @@
 import { resolveAffiliateLink } from './affiliate.ts';
 import { AVAILABILITY_FRESHNESS_MS, PRICE_FRESHNESS_MS, isSpecificationReviewDue, isVerifiedOfferEligible, timestampIsFresh } from './eligibility.ts';
-import { CommercialObservationSchema, EditorialReviewEventSchema, ObservationCollectionSchema } from './schema.ts';
-import type { AffiliateProgram, Catalog, CommercialObservation, EditorialReviewDecision, ObservationCollection, Product } from './schema.ts';
+import { CommercialObservationSchema, EditorialReviewEventSchema, ManufacturerProductObservationSchema, ObservationCollectionSchema } from './schema.ts';
+import type { AffiliateProgram, Catalog, CommercialObservation, EditorialReviewDecision, Observation, ObservationCollection, Product } from './schema.ts';
 
 export type ObservationProblem = { key: string; observationIds: string[]; message: string };
 
@@ -12,6 +12,10 @@ export type EditorialDecisionInput = {
   reviewedAt: string;
   rejectionReason?: string;
 };
+
+export function isCommercialObservation(observation: Observation): observation is CommercialObservation {
+  return 'offerId' in observation;
+}
 
 export function prepareObservationIngestion(
   existing: ObservationCollection,
@@ -88,7 +92,7 @@ export function applyEditorialDecision(collection: ObservationCollection, input:
 
   const rejectionReason = input.decision === 'rejected' ? input.rejectionReason?.trim() ?? '' : null;
   if (input.decision === 'rejected' && !rejectionReason) throw new Error('Rejected evidence requires a reason');
-  if (input.decision === 'approved') {
+  if (input.decision === 'approved' && isCommercialObservation(observation)) {
     if (observation.priceCents === null || !timestampIsFresh(observation.observedAt, PRICE_FRESHNESS_MS, new Date(reviewedAtMs))) {
       throw new Error('Price evidence must be present and fresh within seven days to approve');
     }
@@ -100,7 +104,9 @@ export function applyEditorialDecision(collection: ObservationCollection, input:
     }
   }
 
-  const updatedObservation = CommercialObservationSchema.parse({
+  const updatedObservation = (isCommercialObservation(observation)
+    ? CommercialObservationSchema
+    : ManufacturerProductObservationSchema).parse({
     ...observation,
     reviewStatus: input.decision,
     reviewer,
@@ -128,11 +134,14 @@ export function applyEditorialDecision(collection: ObservationCollection, input:
   });
 }
 
-function observationKey(observation: CommercialObservation): string {
-  return [observation.productId, observation.offerId, observation.configuration.id, observation.merchant.toLowerCase(), observation.sourceUrl, observation.observedAt].join('|');
+function observationKey(observation: Observation): string {
+  if (!isCommercialObservation(observation)) {
+    return ['manufacturer_product', observation.productId, observation.configuration.id, observation.sourceUrl, observation.observedAt].join('|');
+  }
+  return ['commercial', observation.productId, observation.offerId, observation.configuration.id, observation.merchant.toLowerCase(), observation.sourceUrl, observation.observedAt].join('|');
 }
 
-export function findDuplicateObservations(observations: CommercialObservation[]): ObservationProblem[] {
+export function findDuplicateObservations(observations: Observation[]): ObservationProblem[] {
   const groups = new Map<string, string[]>();
   observations.forEach((observation) => {
     const key = observationKey(observation);
@@ -141,17 +150,36 @@ export function findDuplicateObservations(observations: CommercialObservation[])
   return [...groups.entries()].filter(([, ids]) => ids.length > 1).map(([key, observationIds]) => ({ key, observationIds, message: 'Duplicate observation for the same product, offer, configuration, source, and timestamp.' }));
 }
 
-export function findConflictingObservations(observations: CommercialObservation[]): ObservationProblem[] {
+export function findConflictingObservations(observations: Observation[]): ObservationProblem[] {
   const groups = new Map<string, CommercialObservation[]>();
-  observations.forEach((observation) => {
+  observations.filter(isCommercialObservation).forEach((observation) => {
     const key = [observation.productId, observation.offerId, observation.configuration.id, observation.merchant.toLowerCase(), observation.observedAt].join('|');
     groups.set(key, [...(groups.get(key) ?? []), observation]);
   });
-  return [...groups.entries()].flatMap(([key, group]) => {
+  const commercialConflicts = [...groups.entries()].flatMap(([key, group]) => {
     if (group.length < 2) return [];
     const facts = new Set(group.map((item) => `${item.priceCents}:${item.mandatoryShippingCents}:${item.shippingStatus}:${item.availability}`));
     return facts.size > 1 ? [{ key, observationIds: group.map((item) => item.id), message: 'Conflicting commercial facts for the same configuration and timestamp.' }] : [];
   });
+  const manufacturerGroups = new Map<string, Extract<Observation, { observationType: 'manufacturer_product' }> []>();
+  observations.filter((item): item is Extract<Observation, { observationType: 'manufacturer_product' }> => !isCommercialObservation(item)).forEach((observation) => {
+    const key = [observation.productId, observation.configuration.id, observation.sourceUrl, observation.observedAt].join('|');
+    manufacturerGroups.set(key, [...(manufacturerGroups.get(key) ?? []), observation]);
+  });
+  const manufacturerConflicts = [...manufacturerGroups.entries()].flatMap(([key, group]) => {
+    if (group.length < 2) return [];
+    const facts = new Set(group.map((item) => JSON.stringify({
+      configuration: {
+        ...item.configuration,
+        selectedOptions: Object.fromEntries(Object.entries(item.configuration.selectedOptions).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)),
+      },
+      currency: item.currency,
+      priceCents: item.priceCents,
+      availability: item.availability,
+    })));
+    return facts.size > 1 ? [{ key, observationIds: group.map((item) => item.id), message: 'Conflicting manufacturer-page claims for the same configuration, source, and timestamp.' }] : [];
+  });
+  return [...commercialConflicts, ...manufacturerConflicts];
 }
 
 export function validateObservationReferences(collection: ObservationCollection, products: Product[]): string[] {
@@ -163,12 +191,24 @@ export function validateObservationReferences(collection: ObservationCollection,
     if (!product) errors.push(`Observation ${observation.id} references missing product ${observation.productId}.`);
     else if (product.manufacturer.trim().toLowerCase() !== observation.manufacturer.trim().toLowerCase()) errors.push(`Observation ${observation.id} conflicts with the product manufacturer.`);
     else if (product.model.trim().toLowerCase() !== observation.configuration.exactModel.trim().toLowerCase()) errors.push(`Observation ${observation.id} conflicts with the product model/configuration reference.`);
-    const assessmentConfiguration = assessmentByProductId.get(observation.productId)?.exactConfiguration;
+    const assessment = assessmentByProductId.get(observation.productId);
+    const assessmentConfiguration = assessment?.exactConfiguration;
+    if (!isCommercialObservation(observation) && !assessmentConfiguration) {
+      errors.push(`Manufacturer observation ${observation.id} requires an exact candidate assessment configuration.`);
+    }
     if (product
       && product.model.trim().toLowerCase() === observation.configuration.exactModel.trim().toLowerCase()
       && assessmentConfiguration
       && !sameProductConfiguration(observation.configuration, assessmentConfiguration)) {
       errors.push(`Observation ${observation.id} does not match the candidate's assessed exact configuration.`);
+    }
+    if (product && !isCommercialObservation(observation)
+      && (!assessment
+        || observation.productUrl !== product.officialManufacturerUrl
+        || observation.sourceUrl !== product.officialManufacturerUrl
+        || assessment.productUrl !== product.officialManufacturerUrl
+        || !assessment.sourceUrls.includes(observation.sourceUrl))) {
+      errors.push(`Manufacturer observation ${observation.id} and its candidate assessment must cite the product's official manufacturer URL.`);
     }
   });
   collection.candidateAssessments.forEach((assessment) => {
@@ -180,7 +220,7 @@ export function validateObservationReferences(collection: ObservationCollection,
 }
 
 function sameProductConfiguration(
-  left: CommercialObservation['configuration'],
+  left: Observation['configuration'],
   right: NonNullable<ObservationCollection['candidateAssessments'][number]['exactConfiguration']>,
 ): boolean {
   const leftOptions = Object.entries(left.selectedOptions).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
@@ -215,15 +255,16 @@ export type CatalogQualityReport = {
 };
 
 export function createCatalogQualityReport(catalog: Catalog, collection: ObservationCollection, programs: AffiliateProgram[], now = new Date()): CatalogQualityReport {
-  const freshPriceObservations = collection.observations.filter((item) => item.priceCents !== null && item.mandatoryShippingCents !== null && timestampIsFresh(item.observedAt, PRICE_FRESHNESS_MS, now)).length;
-  const freshStockObservations = collection.observations.filter((item) => item.availability === 'in_stock' && timestampIsFresh(item.observedAt, AVAILABILITY_FRESHNESS_MS, now)).length;
-  const staleObservations = collection.observations.filter((item) => {
+  const commercialObservations = collection.observations.filter(isCommercialObservation);
+  const freshPriceObservations = commercialObservations.filter((item) => item.priceCents !== null && item.mandatoryShippingCents !== null && timestampIsFresh(item.observedAt, PRICE_FRESHNESS_MS, now)).length;
+  const freshStockObservations = commercialObservations.filter((item) => item.availability === 'in_stock' && timestampIsFresh(item.observedAt, AVAILABILITY_FRESHNESS_MS, now)).length;
+  const staleObservations = commercialObservations.filter((item) => {
     const priceStale = item.priceCents !== null && !timestampIsFresh(item.observedAt, PRICE_FRESHNESS_MS, now);
     const stockStale = item.availability === 'in_stock' && !timestampIsFresh(item.observedAt, AVAILABILITY_FRESHNESS_MS, now);
     return priceStale || stockStale;
   }).length;
-  const missingShippingFromObservations = collection.observations.filter((item) => item.shippingStatus === 'unknown' || item.mandatoryShippingCents === null).length;
-  const assessedWithoutShipping = collection.candidateAssessments.filter((item) => item.shippingStatus === 'unknown' && !collection.observations.some((observation) => observation.productId === item.productId)).length;
+  const missingShippingFromObservations = commercialObservations.filter((item) => item.shippingStatus === 'unknown' || item.mandatoryShippingCents === null).length;
+  const assessedWithoutShipping = collection.candidateAssessments.filter((item) => item.shippingStatus === 'unknown' && !commercialObservations.some((observation) => observation.productId === item.productId)).length;
   const productById = new Map(catalog.products.map((product) => [product.id, product]));
   const eligibleOffers = catalog.offers.filter((offer) => {
     const product = productById.get(offer.productId);
@@ -245,8 +286,8 @@ export function createCatalogQualityReport(catalog: Catalog, collection: Observa
     staleObservations,
     specificationReviewsDue: catalog.products.filter((product) => isSpecificationReviewDue(product, now)).length,
     missingShippingEvidence: missingShippingFromObservations + assessedWithoutShipping,
-    conflictingObservations: findConflictingObservations(collection.observations).length,
-    duplicateObservations: findDuplicateObservations(collection.observations).length,
+    conflictingObservations: findConflictingObservations(commercialObservations).length,
+    duplicateObservations: findDuplicateObservations(commercialObservations).length,
     approvedAffiliatePrograms: programs.filter((program) => program.status === 'approved').length,
     activeAffiliateLinks,
     reviewedObservations: collection.observations.filter((item) => item.reviewStatus === 'approved' || item.reviewStatus === 'rejected').length,
