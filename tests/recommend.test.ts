@@ -26,6 +26,7 @@ function verifiedProduct() {
   return CatalogSchema.shape.products.element.parse({
     ...product,
     dataStatus: 'verified',
+    configuration: { id: configurationId, label: 'Synthetic verified-test Branch Duo 48x24', exactModel: 'Duo Standing Desk', sku: 'TEST-ONLY', desktopWidthInches: 48, desktopDepthInches: 24, selectedOptions: { desktop: '48x24' } },
     specificationReferences: Object.fromEntries(Object.entries(product.specificationReferences).map(([key, reference]) => [key, { ...reference, status: 'verified' }])),
     editorialApproval: { collector: 'Product evidence collector', reviewer: 'Independent product reviewer', reviewedAt: now.toISOString(), sourceIds: product.sources.map((source) => source.id) },
   });
@@ -56,6 +57,9 @@ describe('catalog contracts and ingestion', () => {
   });
   it('requires independent product approval and verified identity/specification sources', () => {
     const product = verifiedProduct();
+    expect(() => CatalogSchema.shape.products.element.parse({ ...product, configuration: null })).toThrow(/exact product configuration/);
+    expect(() => CatalogSchema.shape.products.element.parse({ ...product, configuration: { ...product.configuration!, exactModel: 'Different model' } })).toThrow(/must match the product model/);
+    expect(() => CatalogSchema.shape.products.element.parse({ ...product, configuration: { ...product.configuration!, desktopWidthInches: 60 } })).toThrow(/must match the verified desktop specification/);
     expect(() => CatalogSchema.shape.products.element.parse({ ...product, editorialApproval: null })).toThrow(/independent editorial approval/);
     expect(() => CatalogSchema.shape.products.element.parse({ ...product, editorialApproval: { ...product.editorialApproval!, collector: 'Same person', reviewer: 'Same person' } })).toThrow(/independent from the evidence collector/);
     expect(() => CatalogSchema.shape.products.element.parse({ ...product, specificationReferences: { ...product.specificationReferences, identity: { ...product.specificationReferences.identity!, status: 'partially_verified' } } })).toThrow(/independently verified identity/);

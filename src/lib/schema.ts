@@ -29,6 +29,7 @@ export const ProductConfigurationSchema = z.object({
   id: z.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
   label: z.string().min(1).max(300),
   exactModel: z.string().min(1).max(200),
+  sku: z.string().trim().min(1).max(100).nullable().default(null),
   desktopWidthInches: z.number().positive().nullable(),
   desktopDepthInches: z.number().positive().nullable(),
   selectedOptions: z.record(z.string(), z.string().min(1)).default({}),
@@ -209,6 +210,7 @@ export const ProductSchema = z.object({
   market: MarketSchema,
   dataStatus: DataStatusSchema,
   officialManufacturerUrl: z.url().nullable(),
+  configuration: ProductConfigurationSchema.nullable().default(null),
   specifications: DeskSpecificationsSchema.optional(),
   specificationReferences: z.record(z.string(), SpecificationReferenceSchema).default({}),
   image: ProductImageSchema.optional(),
@@ -248,6 +250,17 @@ export const ProductSchema = z.object({
   }
   if (product.dataStatus === 'verified') {
     if (!product.officialManufacturerUrl) context.addIssue({ code: 'custom', path: ['officialManufacturerUrl'], message: 'Verified products require an official manufacturer URL' });
+    if (!product.configuration) context.addIssue({ code: 'custom', path: ['configuration'], message: 'Verified products require an exact product configuration' });
+    else {
+      if (product.configuration.exactModel.trim() !== product.model.trim()) context.addIssue({ code: 'custom', path: ['configuration', 'exactModel'], message: 'Verified product configuration must match the product model' });
+      if (Object.keys(product.configuration.selectedOptions).length === 0) context.addIssue({ code: 'custom', path: ['configuration', 'selectedOptions'], message: 'Verified product configuration requires selected options' });
+      if (product.configuration.desktopWidthInches !== null && product.specifications?.desktopWidthInches !== undefined && product.configuration.desktopWidthInches !== product.specifications.desktopWidthInches) {
+        context.addIssue({ code: 'custom', path: ['configuration', 'desktopWidthInches'], message: 'Configuration width must match the verified desktop specification' });
+      }
+      if (product.configuration.desktopDepthInches !== null && product.specifications?.desktopDepthInches !== undefined && product.configuration.desktopDepthInches !== product.specifications.desktopDepthInches) {
+        context.addIssue({ code: 'custom', path: ['configuration', 'desktopDepthInches'], message: 'Configuration depth must match the verified desktop specification' });
+      }
+    }
     if (product.sources.length === 0) context.addIssue({ code: 'custom', path: ['sources'], message: 'Verified products require at least one source' });
     if (!product.specificationReferences.identity) context.addIssue({ code: 'custom', path: ['specificationReferences', 'identity'], message: 'Verified products require identity provenance' });
     else if (product.specificationReferences.identity.status !== 'verified') context.addIssue({ code: 'custom', path: ['specificationReferences', 'identity', 'status'], message: 'Verified products require independently verified identity evidence' });
