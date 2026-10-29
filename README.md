@@ -21,9 +21,12 @@ npm run check
 npm run catalog:check
 npm run build
 npm audit
+npm run smoke
 ```
 
 Phase 3.3 local evidence commands are `observations:list`, `observations:validate`, `observations:preview`, `observations:record`, and `quality:report`. Recording requires explicit human-approval metadata and does not promote products or offers automatically.
+
+Phase 3.4 search metadata, sitemap/robots policy, structured-data exclusions, privacy analytics status, and accessibility/performance limitations are documented in `docs/PHASE3_4_*`.
 
 ## Deployment
 
