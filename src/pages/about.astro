@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_MAILTO } from '../lib/contact';
 ---
 <BaseLayout
   title="About GearPilot AI | Standing Desk and Home-Office Planning"
@@ -20,6 +21,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     <h2>Editorial independence</h2>
     <p>If affiliate relationships are approved in the future, they will be disclosed and kept separate from recommendation scores. Affiliate status or commission rates will not determine which products qualify or how they rank.</p>
-    <p>The site's legal operator and monitored contact channel have not yet been published. The <a href="/contact/">contact page</a> explains this limitation; owner identity and contact details will be added only after the operator supplies and verifies them.</p>
+    <p>The site's legal operator has not been published. For questions, privacy requests, corrections, or affiliate inquiries, use the <a href="/contact/">contact page</a> or email <a href={PUBLIC_CONTACT_MAILTO}>{PUBLIC_CONTACT_EMAIL}</a>. The owner reports testing the address for sending and receiving.</p>
   </article>
 </BaseLayout>

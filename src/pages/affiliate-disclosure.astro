@@ -1,11 +1,14 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_MAILTO } from '../lib/contact';
 ---
 <BaseLayout title="Affiliate Disclosure | GearPilot AI" description="How GearPilot AI handles affiliate relationships, sponsored links, and ranking independence." canonicalPath="/affiliate-disclosure/">
   <h1>Affiliate disclosure</h1>
   <p>If affiliate links are approved and later activated, GearPilot AI may receive a commission from qualifying purchases. Any such relationship will be disclosed. Affiliate status and commission rates will not change product eligibility, scores, or ranking.</p>
   <h2>Current status</h2>
-  <p>The public finder currently contains synthetic demonstration records and no purchase links. Research candidates are not purchase recommendations. The internal affiliate-program registry records a pending Branch advertiser application based on owner-supplied account evidence; pending is not acceptance or authorization to use affiliate links. The other seven researched merchants remain not applied. GearPilot AI does not claim participation in an approved merchant program or commission earnings. Network account setup, tax or payment setup, and an advertiser's presence in a network are not the same as receiving advertiser approval.</p>
+  <p>The public finder currently contains synthetic demonstration records and no purchase links. There are no independently verified real products, eligible commercial offers, or approved affiliate programs. Research candidates are not purchase recommendations. The internal affiliate-program registry records a pending Branch advertiser application based on owner-supplied account evidence; pending is not acceptance or authorization to use affiliate links. The other seven researched merchants remain not applied. GearPilot AI does not claim participation in an approved merchant program or commission earnings. Network account setup, tax or payment setup, and an advertiser's presence in a network are not the same as receiving advertiser approval.</p>
   <h2>How future links will work</h2>
   <p>We will show an outbound link only after the product and offer are verified, the program has approval evidence and a safe credential reference, and the exact destination host is allowlisted. Sponsored links will use <code>rel="sponsored nofollow noopener noreferrer"</code>. If no approved link is available, the page will say so rather than guessing a tracking URL.</p>
+  <h2>Affiliate inquiries</h2>
+  <p>For affiliate program inquiries, email <a href={PUBLIC_CONTACT_MAILTO}>{PUBLIC_CONTACT_EMAIL}</a>. The owner reports testing this address for sending and receiving; no advertiser approval or partnership is implied.</p>
 </BaseLayout>
