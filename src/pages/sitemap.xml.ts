@@ -1,6 +1,6 @@
 export const prerender = true;
 
-const indexablePaths = ['/', '/methodology/', '/affiliate-disclosure/', '/privacy/', '/guides/standing-desk-fit/'];
+const indexablePaths = ['/', '/about/', '/methodology/', '/affiliate-disclosure/', '/privacy/', '/guides/standing-desk-fit/'];
 const xmlEscape = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
 export function GET({ site }: { site: URL | undefined }) {

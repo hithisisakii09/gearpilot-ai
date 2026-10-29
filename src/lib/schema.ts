@@ -74,10 +74,17 @@ const DomainSchema = z.string().superRefine((value, context) => {
 const CredentialReferenceSchema = z.string().regex(/^credential-ref:[a-z0-9][a-z0-9_./:-]*$/);
 
 export const AffiliateApprovalEvidenceSchema = z.object({
-  reference: z.string().min(1).max(200),
+  reference: z.string().regex(/^approval-ref:[a-z0-9][a-z0-9_./:-]*$/),
   reviewedAt: TimestampSchema,
-  sourceUrl: z.url().optional(),
+  sourceUrl: HttpsUrlSchema.optional(),
   note: z.string().min(1).max(500).optional(),
+});
+
+export const AffiliateNetworkRegistrationEvidenceSchema = z.object({
+  provider: z.string().min(1).max(100),
+  reference: z.string().regex(/^approval-ref:[a-z0-9][a-z0-9_./:-]*$/),
+  registeredAt: TimestampSchema,
+  sourceUrl: HttpsUrlSchema,
 });
 
 export const AffiliateProgramSchema = z.object({
@@ -87,6 +94,8 @@ export const AffiliateProgramSchema = z.object({
   applicationUrl: z.url().nullable(),
   programName: z.string().min(1).nullable(),
   networkName: z.string().min(1).nullable(),
+  networkRegistrationEvidence: AffiliateNetworkRegistrationEvidenceSchema.nullable().default(null),
+  programRestrictions: z.array(z.string().trim().min(1).max(500)).default([]),
   allowedRegions: z.array(MarketSchema).default([]),
   approvedDestinationDomains: z.array(DomainSchema).default([]),
   approvalEvidence: AffiliateApprovalEvidenceSchema.nullable(),
@@ -100,9 +109,30 @@ export const AffiliateProgramSchema = z.object({
   const needsApprovalProof = program.status === 'approved';
   if (needsApprovalProof && !program.programName) context.addIssue({ code: 'custom', path: ['programName'], message: 'Approved programs require a program name' });
   if (needsApprovalProof && !program.approvalEvidence) context.addIssue({ code: 'custom', path: ['approvalEvidence'], message: 'Approved programs require approval evidence' });
+  if (needsApprovalProof && !program.approvalEvidence?.sourceUrl) context.addIssue({ code: 'custom', path: ['approvalEvidence', 'sourceUrl'], message: 'Approved programs require an official approval source URL' });
   if (needsApprovalProof && !program.approvalDate) context.addIssue({ code: 'custom', path: ['approvalDate'], message: 'Approved programs require an approval date' });
   if (needsApprovalProof && !program.trackingIdReference) context.addIssue({ code: 'custom', path: ['trackingIdReference'], message: 'Approved programs require a credential reference' });
   if (needsApprovalProof && program.approvedDestinationDomains.length === 0) context.addIssue({ code: 'custom', path: ['approvedDestinationDomains'], message: 'Approved programs require at least one approved destination domain' });
+  if (needsApprovalProof && program.allowedRegions.length === 0) context.addIssue({ code: 'custom', path: ['allowedRegions'], message: 'Approved programs require at least one approved market' });
+  if (needsApprovalProof && program.programRestrictions.length === 0) context.addIssue({ code: 'custom', path: ['programRestrictions'], message: 'Approved programs require documented program restrictions' });
+  if (needsApprovalProof && program.networkName?.trim().toLowerCase() === 'cj' && !program.networkRegistrationEvidence) {
+    context.addIssue({ code: 'custom', path: ['networkRegistrationEvidence'], message: 'CJ programs require separate network registration evidence' });
+  }
+  if (needsApprovalProof && program.networkName?.trim().toLowerCase() === 'cj' && program.networkRegistrationEvidence) {
+    const networkHost = new URL(program.networkRegistrationEvidence.sourceUrl).hostname;
+    if (program.networkRegistrationEvidence.provider.trim().toLowerCase() !== 'cj' || (networkHost !== 'cj.com' && !networkHost.endsWith('.cj.com'))) {
+      context.addIssue({ code: 'custom', path: ['networkRegistrationEvidence'], message: 'CJ registration evidence must identify CJ and use an official CJ host' });
+    }
+  }
+  if (needsApprovalProof && program.id === 'branch' && program.approvalEvidence?.sourceUrl) {
+    const approvalHost = new URL(program.approvalEvidence.sourceUrl).hostname;
+    if (approvalHost !== 'branchfurniture.com' && !approvalHost.endsWith('.branchfurniture.com')) {
+      context.addIssue({ code: 'custom', path: ['approvalEvidence', 'sourceUrl'], message: 'Branch approval evidence must use an official Branch host' });
+    }
+  }
+  if (needsApprovalProof && program.approvalDate && program.approvalEvidence && Date.parse(program.approvalEvidence.reviewedAt) < Date.parse(program.approvalDate)) {
+    context.addIssue({ code: 'custom', path: ['approvalEvidence', 'reviewedAt'], message: 'Approval evidence review cannot predate program approval' });
+  }
   if (program.status !== 'approved' && program.approvedDestinationDomains.length > 0) context.addIssue({ code: 'custom', path: ['approvedDestinationDomains'], message: 'Only approved programs may have approved destination domains' });
   if (program.status === 'expired' && !program.expiresAt) context.addIssue({ code: 'custom', path: ['expiresAt'], message: 'Expired programs require an expiry timestamp' });
 });
