@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 /** Read-only checks for research configuration identity. Never promotes offers. */
 export function auditConfigurationIdentity(candidates, observationData) {
@@ -24,7 +25,7 @@ export function auditConfigurationIdentity(candidates, observationData) {
   return findings;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const catalogPath = new URL('../src/data/candidates.json', import.meta.url);
   const observationsPath = new URL('../src/data/observations.json', import.meta.url);
   const findings = auditConfigurationIdentity(JSON.parse(readFileSync(catalogPath, 'utf8')), JSON.parse(readFileSync(observationsPath, 'utf8')));
