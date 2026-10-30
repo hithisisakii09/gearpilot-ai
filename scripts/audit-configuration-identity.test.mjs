@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { auditConfigurationIdentity } from './audit-configuration-identity.mjs';
 
 const candidate = { products: [{ id: 'branch-duo-standing-desk', specifications: { desktopWidthInches: 48, desktopDepthInches: 24 } }] };
 
 describe('read-only configuration identity audit', () => {
+  it('runs from the repository root as a relative CLI path', () => {
+    const root = fileURLToPath(new URL('../', import.meta.url));
+    const output = execFileSync(process.execPath, ['scripts/audit-configuration-identity.mjs'], { cwd: root, encoding: 'utf8' });
+    const report = JSON.parse(output);
+    expect(report.status).toBe('review_required');
+    expect(report.findings).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'CONFIGURATION_MISMATCH', productId: 'branch-duo-standing-desk', catalog: 48, assessment: 36 })]));
+  });
   it('flags a 36x24 assessment against a 48x24 catalog', () => {
     const result = auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'branch-duo-standing-desk', exactConfiguration: { id: 'branch-36x24', desktopWidthInches: 36, desktopDepthInches: 24 } }] });
     expect(result).toEqual([{ severity: 'blocker', code: 'CONFIGURATION_MISMATCH', productId: 'branch-duo-standing-desk', field: 'width', catalog: 48, assessment: 36, configurationId: 'branch-36x24' }]);
