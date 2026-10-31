@@ -14,10 +14,17 @@ export function auditConfigurationIdentity(candidates, observationData) {
     if (products.has(product.id)) findings.push({ severity: 'blocker', code: 'DUPLICATE_CATALOG_PRODUCT_ID', productId: product.id });
     else products.set(product.id, product);
   }
+  const assessmentIds = new Set();
   for (const assessment of observationData.candidateAssessments ?? []) {
     if (typeof assessment.productId !== 'string' || !assessment.productId.trim()) {
       findings.push({ severity: 'blocker', code: 'MISSING_ASSESSMENT_PRODUCT_ID' });
       continue;
+    }
+    const configurationId = assessment.exactConfiguration?.id;
+    if (typeof configurationId === 'string' && configurationId.trim()) {
+      const identity = JSON.stringify([assessment.productId, configurationId]);
+      if (assessmentIds.has(identity)) findings.push({ severity: 'warning', code: 'DUPLICATE_ASSESSMENT_CONFIGURATION', productId: assessment.productId, configurationId });
+      else assessmentIds.add(identity);
     }
     const product = products.get(assessment.productId);
     if (!product) {
