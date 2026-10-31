@@ -18,3 +18,7 @@ This repository may be developed using the upstream open-source methodologies:
 The Phase 4.8 hold remains active. Do not promote real-product candidates, approve observations, enable affiliate links, merge into public release, or deploy production merely because tests pass. A developer, collector, and independent reviewers must not be silently conflated. Do not upload private evidence to a public repository. See issues #21 and #22.
 
 This document adopts **workflow principles only**. It does not install gstack/Superpowers into ChatGPT, invoke their scripts, or grant them access to credentials.
+
+## Verified CI and developer command
+
+The `Evidence audit (read-only)` and `Verify` GitHub Actions checks succeeded for commit `0da729f1f83d8ccf1616e211b77e329beb004f02`. Future commits require their own CI verification. Run `npm run audit:config` locally to produce the JSON findings; `review_required` is an explicit research status and not an approval or a release authorization. This script intentionally exits successfully to preserve the read-only reporting role. Do not confuse green CI with permission to publish.
