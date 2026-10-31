@@ -10,6 +10,11 @@ function instant(value) {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
   const calendarDate = new Date(Date.UTC(year, month - 1, day));
   if (!Number.isFinite(calendarDate.getTime()) || calendarDate.toISOString().slice(0, 10) !== value.slice(0, 10)) return null;
+  const time = value.match(/T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$/);
+  if (!time) return null;
+  const [, hours, minutes, seconds, offset, offsetHours, offsetMinutes] = time;
+  if (+hours > 23 || +minutes > 59 || +seconds > 59) return null;
+  if (offset !== 'Z' && (+offsetHours > 14 || +offsetMinutes > 59 || (+offsetHours === 14 && +offsetMinutes !== 0))) return null;
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp) ? timestamp : null;
 }
