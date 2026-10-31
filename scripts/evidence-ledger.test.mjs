@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildEvidenceLedger, verifyEvidenceLedger } from './evidence-ledger.mjs';
-const evidence = { taskId: '2026-10-31:IN:standing_desk', sku: 'SKU-1', reviewStatus: 'pending_review', publicationAuthorized: false };
-const intake = { valid: true, errors: [], accepted: [evidence] };
+const makeEvidence = () => ({ taskId: '2026-10-31:IN:standing_desk', sku: 'SKU-1', reviewStatus: 'pending_review', publicationAuthorized: false });
+const evidence = makeEvidence();
+const intake = { valid: true, errors: [], accepted: [makeEvidence()] };
 describe('research evidence integrity ledger', () => {
   it('builds a verifiable ledger', () => { const ledger = buildEvidenceLedger(intake, { generatedAt: '2026-10-31T00:00:00Z' }); expect(ledger.recordCount).toBe(1); expect(verifyEvidenceLedger(ledger)).toBe(true); });
   it('detects evidence tampering', () => { const ledger = buildEvidenceLedger(intake); ledger.records[0].evidence.sku = 'CHANGED'; expect(verifyEvidenceLedger(ledger)).toBe(false); });
