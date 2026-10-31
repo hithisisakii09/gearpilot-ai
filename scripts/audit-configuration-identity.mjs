@@ -27,6 +27,9 @@ export function auditConfigurationIdentity(candidates, observationData) {
       findings.push({ severity: 'blocker', code: 'MISSING_OBSERVATION_PRODUCT_ID' });
       continue;
     }
+    if (observation.reviewStatus !== 'approved') {
+      findings.push({ severity: 'warning', code: 'OBSERVATION_NOT_APPROVED', productId: observation.productId, observationId: observation.id ?? null });
+    }
     const product = products.get(observation.productId);
     if (!product) {
       findings.push({ severity: 'warning', code: 'UNKNOWN_OBSERVATION_PRODUCT', productId: observation.productId });
