@@ -7,12 +7,12 @@ import { auditConfigurationIdentity } from './audit-configuration-identity.mjs';
 export function evaluateReleaseGate({ catalog, observations, evidence = {} }) {
   const findings = auditConfigurationIdentity(catalog, observations);
   const required = ['independentCodeReview', 'twoIndependentApprovers', 'separateCollector', 'privateEncryptedVersionedEvidence', 'liveStagingUat', 'stagingRollback', 'merchantCompliance', 'explicitLaunchApproval'];
-  const checks = required.map((key) => ({ key, verified: evidence[key] === true }));
+  const checks = required.map((key) => ({ key, verified: false, status: 'requires_independent_verification' }));
   const blockers = [
     ...findings.map((finding) => ({ code: finding.code, source: 'configuration_audit', severity: finding.severity })),
     ...checks.filter((check) => !check.verified).map((check) => ({ code: 'UNVERIFIED_RELEASE_GATE', gate: check.key, severity: 'blocker' })),
   ];
-  return { verdict: 'NO_GO', reason: 'PHASE_4_8_PUBLICATION_HOLD', blockers, checks, findings };
+  return { verdict: 'NO_GO', reason: 'PHASE_4_8_PUBLICATION_HOLD', evidenceAccepted: false, blockers, checks, findings };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
