@@ -38,6 +38,12 @@ jobs:
           node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync("staging-artifact-inventory.json","utf8")); if(m.gitSha!==process.env.GITHUB_SHA) process.exit(1); m.sourceBranchHeadSha=process.env.PR_HEAD_SHA||process.env.GITHUB_SHA; m.githubEventName=process.env.GITHUB_EVENT_NAME; fs.writeFileSync("staging-artifact-inventory.json",JSON.stringify(m,null,2)+"\n")'
         env:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - name: Exercise artifact preflight against exact build files (no deploy)
+        run: |
+          mkdir -p preflight-input/gearpilot-private-staging-local
+          cp -a dist preflight-input/gearpilot-private-staging-local/dist
+          cp staging-artifact-inventory.json preflight-input/gearpilot-private-staging-local/
+          node scripts/verify-downloaded-staging-artifact.mjs preflight-input
       - name: Upload validated private staging artifact (no deploy)
         uses: actions/upload-artifact@v4
         with:
