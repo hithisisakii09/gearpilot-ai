@@ -11,6 +11,10 @@ export function auditConfigurationIdentity(candidates, observationData) {
     else products.set(product.id, product);
   }
   for (const assessment of observationData.candidateAssessments ?? []) {
+    if (typeof assessment.productId !== 'string' || !assessment.productId.trim()) {
+      findings.push({ severity: 'blocker', code: 'MISSING_ASSESSMENT_PRODUCT_ID' });
+      continue;
+    }
     const product = products.get(assessment.productId);
     if (!product) {
       findings.push({ severity: 'warning', code: 'UNKNOWN_PRODUCT', productId: assessment.productId });
