@@ -30,6 +30,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   const tasks = planResearch(registry, catalog, { date });
   const output = resolve('artifacts/research-queue-' + date + '.json');
   mkdirSync(dirname(output), { recursive: true });
-  writeFileSync(output, JSON.stringify({ generatedAt: new Date().toISOString(), researchOnly: true, tasks }, null, 2) + '\\n');
+  writeFileSync(output, JSON.stringify({ generatedAt: new Date().toISOString(), researchOnly: true, tasks }, null, 2) + '\n');
   console.log(JSON.stringify({ output, tasks: tasks.length, countries: new Set(tasks.map(t => t.country)).size, publicationAuthorized: false }));
 }
