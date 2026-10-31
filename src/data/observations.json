@@ -7,7 +7,17 @@
       "offerId": "vari-essential-401512-direct",
       "manufacturer": "Vari",
       "merchant": "Vari",
-      "configuration": {"id":"vari-essential-401512-hazel-white","label":"48x24, Hazel Wood/White finish, SKU 401512","exactModel":"Essential Electric Standing Desk 48x24","desktopWidthInches":48,"desktopDepthInches":24,"selectedOptions":{"finish":"Hazel Wood/White","sku":"401512"}},
+      "configuration": {
+        "id": "vari-essential-401512-hazel-white",
+        "label": "48x24, Hazel Wood/White finish, SKU 401512",
+        "exactModel": "Essential Electric Standing Desk 48x24",
+        "desktopWidthInches": 48,
+        "desktopDepthInches": 24,
+        "selectedOptions": {
+          "finish": "Hazel Wood/White",
+          "sku": "401512"
+        }
+      },
       "currency": "USD",
       "priceCents": 36999,
       "mandatoryShippingCents": 0,
@@ -21,7 +31,12 @@
       "reviewStatus": "pending_review",
       "reviewer": null,
       "reviewedAt": null,
-      "sourceMetadata": {"country":"United States","sourceType":"manufacturer_product_page","capturedBy":"manual_review","pageLines":"84-98"}
+      "sourceMetadata": {
+        "country": "United States",
+        "sourceType": "manufacturer_product_page",
+        "capturedBy": "manual_review",
+        "pageLines": "84-98"
+      }
     },
     {
       "id": "vari-comfortedge-402278-20261029",
@@ -29,7 +44,17 @@
       "offerId": "vari-comfortedge-402278-direct",
       "manufacturer": "Vari",
       "merchant": "Vari",
-      "configuration": {"id":"vari-comfortedge-402278-white-silver","label":"60x30, White/Silver finish, SKU 402278","exactModel":"Electric Standing Desk with ComfortEdge 60x30","desktopWidthInches":60,"desktopDepthInches":30,"selectedOptions":{"finish":"White/Silver","sku":"402278"}},
+      "configuration": {
+        "id": "vari-comfortedge-402278-white-silver",
+        "label": "60x30, White/Silver finish, SKU 402278",
+        "exactModel": "Electric Standing Desk with ComfortEdge 60x30",
+        "desktopWidthInches": 60,
+        "desktopDepthInches": 30,
+        "selectedOptions": {
+          "finish": "White/Silver",
+          "sku": "402278"
+        }
+      },
       "currency": "USD",
       "priceCents": 71920,
       "mandatoryShippingCents": 0,
@@ -43,19 +68,263 @@
       "reviewStatus": "pending_review",
       "reviewer": null,
       "reviewedAt": null,
-      "sourceMetadata": {"country":"United States","sourceType":"manufacturer_product_page","capturedBy":"manual_review","pageLines":"88-106","promotionEnds":"2026-11-18T23:59:00-06:00"}
+      "sourceMetadata": {
+        "country": "United States",
+        "sourceType": "manufacturer_product_page",
+        "capturedBy": "manual_review",
+        "pageLines": "88-106",
+        "promotionEnds": "2026-11-18T23:59:00-06:00"
+      }
     }
   ],
   "candidateAssessments": [
-    {"productId":"branch-duo-standing-desk","manufacturer":"Branch","exactConfiguration":{"id":"branch-duo-36x24-woodgrain-white","label":"36x24 desktop, Woodgrain top, White legs, no optional accessories (internal configuration ID; not a manufacturer SKU)","exactModel":"Duo Standing Desk","sku":null,"desktopWidthInches":36,"desktopDepthInches":24,"selectedOptions":{"desktopSize":"36x24","top":"Woodgrain","legColor":"White","accessories":"None"}},"productUrl":"https://www.branchfurniture.com/products/duo-standing-desk","sourceUrls":["https://www.branchfurniture.com/products/duo-standing-desk"],"assessedAt":"2026-10-29T18:04:54.785Z","priceStatus":"observed","shippingStatus":"unknown","availability":"in_stock","missingEvidence":["mandatory_shipping","human_review"],"notes":"Owner-confirmed configuration; collector akhil supplied manufacturer-page observation timestamp 2026-10-29T17:12:00Z. The page displayed USD 549 and Available; these are page claims only, not checkout-confirmed price or guaranteed stock. SKU is unknown. Destination-specific shipping is unknown. Independent review is pending. No manufacturer observation or commercial offer has been created."},
-    {"productId":"flexispot-e7","manufacturer":"FlexiSpot","exactConfiguration":null,"productUrl":"https://www.flexispot.com/flexispot-pro-standing-desk-e7","sourceUrls":["https://www.flexispot.com/flexispot-pro-standing-desk-e7"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"ambiguous","shippingStatus":"unknown","availability":"unknown","missingEvidence":["exact_configuration","price","mandatory_shipping","availability","human_review"],"notes":"Official page rendered $0 without a selected frame/desktop configuration; this is not accepted as a price observation."},
-    {"productId":"uplift-v2-standing-desk","manufacturer":"UPLIFT Desk","exactConfiguration":null,"productUrl":"https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/","sourceUrls":["https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/","https://www.content.upliftdesk.com/content/pdfs/desks-and-frames/F500-C-Frame-V2-Specs-1.2.pdf"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"missing","shippingStatus":"unknown","availability":"unknown","missingEvidence":["exact_configuration","price","mandatory_shipping","availability","human_review"],"notes":"The official configurator response exceeded the verification tool limit; no desktop, finish, controller, price, shipping, or stock fact was accepted."},
-    {"productId":"uplift-v2-commercial-standing-desk","manufacturer":"UPLIFT Desk","exactConfiguration":null,"productUrl":"https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/","sourceUrls":["https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/","https://www.upliftdesk.com/content/pdfs/desks-and-frames/frma-2-com-c-v2-commercial-desk-spec-sheet.pdf"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"missing","shippingStatus":"unknown","availability":"unknown","missingEvidence":["exact_configuration","price","mandatory_shipping","availability","human_review"],"notes":"The official configurator response exceeded the verification tool limit; no exact commercial configuration or commercial evidence was accepted."},
-    {"productId":"ergonofis-sway-standing-desk","manufacturer":"Ergonofis","exactConfiguration":{"id":"ergonofis-sway-24x48-maple-black","label":"24x48, Maple top, Black frame, no grommets","exactModel":"Sway Standing Desk","desktopWidthInches":48,"desktopDepthInches":24,"selectedOptions":{"wood":"Maple","frame":"Black","grommets":"None"}},"productUrl":"https://ergonofis.com/products/sway-standing-desk","sourceUrls":["https://ergonofis.com/products/sway-standing-desk"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"ambiguous","shippingStatus":"unknown","availability":"unknown","missingEvidence":["price","mandatory_shipping","availability","human_review"],"notes":"A selected 24x48 Maple/Black configuration and 1,895 price were visible, but the page context showed CAD by default; it was not recorded as a USD price."},
-    {"productId":"steelcase-migration-se","manufacturer":"Steelcase","exactConfiguration":null,"productUrl":"https://www.steelcase.com/products/height-adjustable-desks/migration-se/","sourceUrls":["https://www.steelcase.com/products/height-adjustable-desks/migration-se/","https://www.steelcase.com/resources/documents/migration-se-cutsheet"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"missing","shippingStatus":"unknown","availability":"unknown","missingEvidence":["exact_configuration","price","mandatory_shipping","availability","human_review"],"notes":"Official page confirms configurable models and directs buyers to a store/dealer; no exact sellable configuration was selected."},
-    {"productId":"haworth-upside-sit-to-stand-desk","manufacturer":"Haworth","exactConfiguration":null,"productUrl":"https://www.haworth.com/na/en/products/desks-tables/height-adjustable-tables/upside-height-adjustable-table.html","sourceUrls":["https://www.haworth.com/na/en/products/desks-tables/height-adjustable-tables/upside-height-adjustable-table.html"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"missing","shippingStatus":"unknown","availability":"unknown","missingEvidence":["exact_configuration","price","mandatory_shipping","availability","human_review"],"notes":"Official page exposes configuration and price-guide paths, not a selected retail configuration with current checkout facts."},
-    {"productId":"deskhaus-apex-pro","manufacturer":"DeskHaus","exactConfiguration":null,"productUrl":"https://www.deskhaus.com/products/apex-pro-bundle","sourceUrls":["https://www.deskhaus.com/products/apex-pro-bundle"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"missing","shippingStatus":"unknown","availability":"unknown","missingEvidence":["exact_configuration","price","mandatory_shipping","availability","human_review"],"notes":"The recorded official product URL returned 404 during this review; no current commercial fact was accepted."},
-    {"productId":"vari-essential-electric-standing-desk-48x24","manufacturer":"Vari","exactConfiguration":{"id":"vari-essential-401512-hazel-white","label":"48x24, Hazel Wood/White finish, SKU 401512","exactModel":"Essential Electric Standing Desk 48x24","desktopWidthInches":48,"desktopDepthInches":24,"selectedOptions":{"finish":"Hazel Wood/White","sku":"401512"}},"productUrl":"https://www.vari.com/essential-electric-standing-desk-split-top-48x24/FD-ESTSTESD4824.html","sourceUrls":["https://www.vari.com/essential-electric-standing-desk-split-top-48x24/FD-ESTSTESD4824.html"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"observed","shippingStatus":"free","availability":"in_stock","missingEvidence":["human_review"],"notes":"Primary-source commercial facts were captured as pending-review observation vari-essential-401512-20261029; no offer was promoted."},
-    {"productId":"vari-electric-standing-desk-comfortedge-60x30","manufacturer":"Vari","exactConfiguration":{"id":"vari-comfortedge-402278-white-silver","label":"60x30, White/Silver finish, SKU 402278","exactModel":"Electric Standing Desk with ComfortEdge 60x30","desktopWidthInches":60,"desktopDepthInches":30,"selectedOptions":{"finish":"White/Silver","sku":"402278"}},"productUrl":"https://www.vari.com/electric-standing-desk-with-comfortedge-60x30/402278.html","sourceUrls":["https://www.vari.com/electric-standing-desk-with-comfortedge-60x30/402278.html"],"assessedAt":"2026-10-29T05:05:00Z","priceStatus":"observed","shippingStatus":"free","availability":"in_stock","missingEvidence":["human_review"],"notes":"Primary-source promotional commercial facts were captured as pending-review observation vari-comfortedge-402278-20261029; no offer was promoted."}
+    {
+      "productId": "branch-duo-standing-desk",
+      "manufacturer": "Branch",
+      "exactConfiguration": {
+        "id": "branch-duo-36x24-woodgrain-white",
+        "label": "36x24 desktop, Woodgrain top, White legs, no optional accessories (internal configuration ID; not a manufacturer SKU)",
+        "exactModel": "Duo Standing Desk",
+        "sku": null,
+        "desktopWidthInches": 36,
+        "desktopDepthInches": 24,
+        "selectedOptions": {
+          "desktopSize": "36x24",
+          "top": "Woodgrain",
+          "legColor": "White",
+          "accessories": "None"
+        }
+      },
+      "productUrl": "https://www.branchfurniture.com/products/duo-standing-desk",
+      "sourceUrls": [
+        "https://www.branchfurniture.com/products/duo-standing-desk"
+      ],
+      "assessedAt": "2026-10-29T18:04:54.785Z",
+      "priceStatus": "observed",
+      "shippingStatus": "unknown",
+      "availability": "in_stock",
+      "missingEvidence": [
+        "mandatory_shipping",
+        "human_review",
+        "catalog_configuration_identity",
+        "independent_variant_verification"
+      ],
+      "notes": "Owner-confirmed configuration; collector akhil supplied manufacturer-page observation timestamp 2026-10-29T17:12:00Z. The page displayed USD 549 and Available; these are page claims only, not checkout-confirmed price or guaranteed stock. SKU is unknown. Destination-specific shipping is unknown. Independent review is pending. No manufacturer observation or commercial offer has been created. Quarantined from catalog promotion: assessment describes 36x24, while catalog record is 48x24. Preserve both source claims until separately verified; do not transfer price or availability between variants.",
+      "reviewStatus": "quarantined_configuration_mismatch"
+    },
+    {
+      "productId": "flexispot-e7",
+      "manufacturer": "FlexiSpot",
+      "exactConfiguration": null,
+      "productUrl": "https://www.flexispot.com/flexispot-pro-standing-desk-e7",
+      "sourceUrls": [
+        "https://www.flexispot.com/flexispot-pro-standing-desk-e7"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "ambiguous",
+      "shippingStatus": "unknown",
+      "availability": "unknown",
+      "missingEvidence": [
+        "exact_configuration",
+        "price",
+        "mandatory_shipping",
+        "availability",
+        "human_review"
+      ],
+      "notes": "Official page rendered $0 without a selected frame/desktop configuration; this is not accepted as a price observation."
+    },
+    {
+      "productId": "uplift-v2-standing-desk",
+      "manufacturer": "UPLIFT Desk",
+      "exactConfiguration": null,
+      "productUrl": "https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/",
+      "sourceUrls": [
+        "https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/",
+        "https://www.content.upliftdesk.com/content/pdfs/desks-and-frames/F500-C-Frame-V2-Specs-1.2.pdf"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "missing",
+      "shippingStatus": "unknown",
+      "availability": "unknown",
+      "missingEvidence": [
+        "exact_configuration",
+        "price",
+        "mandatory_shipping",
+        "availability",
+        "human_review"
+      ],
+      "notes": "The official configurator response exceeded the verification tool limit; no desktop, finish, controller, price, shipping, or stock fact was accepted."
+    },
+    {
+      "productId": "uplift-v2-commercial-standing-desk",
+      "manufacturer": "UPLIFT Desk",
+      "exactConfiguration": null,
+      "productUrl": "https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/",
+      "sourceUrls": [
+        "https://www.upliftdesk.com/uplift-v2-standing-desk-v2-or-v2-commercial/",
+        "https://www.upliftdesk.com/content/pdfs/desks-and-frames/frma-2-com-c-v2-commercial-desk-spec-sheet.pdf"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "missing",
+      "shippingStatus": "unknown",
+      "availability": "unknown",
+      "missingEvidence": [
+        "exact_configuration",
+        "price",
+        "mandatory_shipping",
+        "availability",
+        "human_review"
+      ],
+      "notes": "The official configurator response exceeded the verification tool limit; no exact commercial configuration or commercial evidence was accepted."
+    },
+    {
+      "productId": "ergonofis-sway-standing-desk",
+      "manufacturer": "Ergonofis",
+      "exactConfiguration": {
+        "id": "ergonofis-sway-24x48-maple-black",
+        "label": "24x48, Maple top, Black frame, no grommets",
+        "exactModel": "Sway Standing Desk",
+        "desktopWidthInches": 48,
+        "desktopDepthInches": 24,
+        "selectedOptions": {
+          "wood": "Maple",
+          "frame": "Black",
+          "grommets": "None"
+        }
+      },
+      "productUrl": "https://ergonofis.com/products/sway-standing-desk",
+      "sourceUrls": [
+        "https://ergonofis.com/products/sway-standing-desk"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "ambiguous",
+      "shippingStatus": "unknown",
+      "availability": "unknown",
+      "missingEvidence": [
+        "price",
+        "mandatory_shipping",
+        "availability",
+        "human_review"
+      ],
+      "notes": "A selected 24x48 Maple/Black configuration and 1,895 price were visible, but the page context showed CAD by default; it was not recorded as a USD price."
+    },
+    {
+      "productId": "steelcase-migration-se",
+      "manufacturer": "Steelcase",
+      "exactConfiguration": null,
+      "productUrl": "https://www.steelcase.com/products/height-adjustable-desks/migration-se/",
+      "sourceUrls": [
+        "https://www.steelcase.com/products/height-adjustable-desks/migration-se/",
+        "https://www.steelcase.com/resources/documents/migration-se-cutsheet"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "missing",
+      "shippingStatus": "unknown",
+      "availability": "unknown",
+      "missingEvidence": [
+        "exact_configuration",
+        "price",
+        "mandatory_shipping",
+        "availability",
+        "human_review"
+      ],
+      "notes": "Official page confirms configurable models and directs buyers to a store/dealer; no exact sellable configuration was selected."
+    },
+    {
+      "productId": "haworth-upside-sit-to-stand-desk",
+      "manufacturer": "Haworth",
+      "exactConfiguration": null,
+      "productUrl": "https://www.haworth.com/na/en/products/desks-tables/height-adjustable-tables/upside-height-adjustable-table.html",
+      "sourceUrls": [
+        "https://www.haworth.com/na/en/products/desks-tables/height-adjustable-tables/upside-height-adjustable-table.html"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "missing",
+      "shippingStatus": "unknown",
+      "availability": "unknown",
+      "missingEvidence": [
+        "exact_configuration",
+        "price",
+        "mandatory_shipping",
+        "availability",
+        "human_review"
+      ],
+      "notes": "Official page exposes configuration and price-guide paths, not a selected retail configuration with current checkout facts."
+    },
+    {
+      "productId": "deskhaus-apex-pro",
+      "manufacturer": "DeskHaus",
+      "exactConfiguration": null,
+      "productUrl": "https://www.deskhaus.com/products/apex-pro-bundle",
+      "sourceUrls": [
+        "https://www.deskhaus.com/products/apex-pro-bundle"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "missing",
+      "shippingStatus": "unknown",
+      "availability": "unknown",
+      "missingEvidence": [
+        "exact_configuration",
+        "price",
+        "mandatory_shipping",
+        "availability",
+        "human_review"
+      ],
+      "notes": "The recorded official product URL returned 404 during this review; no current commercial fact was accepted."
+    },
+    {
+      "productId": "vari-essential-electric-standing-desk-48x24",
+      "manufacturer": "Vari",
+      "exactConfiguration": {
+        "id": "vari-essential-401512-hazel-white",
+        "label": "48x24, Hazel Wood/White finish, SKU 401512",
+        "exactModel": "Essential Electric Standing Desk 48x24",
+        "desktopWidthInches": 48,
+        "desktopDepthInches": 24,
+        "selectedOptions": {
+          "finish": "Hazel Wood/White",
+          "sku": "401512"
+        }
+      },
+      "productUrl": "https://www.vari.com/essential-electric-standing-desk-split-top-48x24/FD-ESTSTESD4824.html",
+      "sourceUrls": [
+        "https://www.vari.com/essential-electric-standing-desk-split-top-48x24/FD-ESTSTESD4824.html"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "observed",
+      "shippingStatus": "free",
+      "availability": "in_stock",
+      "missingEvidence": [
+        "human_review"
+      ],
+      "notes": "Primary-source commercial facts were captured as pending-review observation vari-essential-401512-20261029; no offer was promoted."
+    },
+    {
+      "productId": "vari-electric-standing-desk-comfortedge-60x30",
+      "manufacturer": "Vari",
+      "exactConfiguration": {
+        "id": "vari-comfortedge-402278-white-silver",
+        "label": "60x30, White/Silver finish, SKU 402278",
+        "exactModel": "Electric Standing Desk with ComfortEdge 60x30",
+        "desktopWidthInches": 60,
+        "desktopDepthInches": 30,
+        "selectedOptions": {
+          "finish": "White/Silver",
+          "sku": "402278"
+        }
+      },
+      "productUrl": "https://www.vari.com/electric-standing-desk-with-comfortedge-60x30/402278.html",
+      "sourceUrls": [
+        "https://www.vari.com/electric-standing-desk-with-comfortedge-60x30/402278.html"
+      ],
+      "assessedAt": "2026-10-29T05:05:00Z",
+      "priceStatus": "observed",
+      "shippingStatus": "free",
+      "availability": "in_stock",
+      "missingEvidence": [
+        "human_review"
+      ],
+      "notes": "Primary-source promotional commercial facts were captured as pending-review observation vari-comfortedge-402278-20261029; no offer was promoted."
+    }
   ]
 }
