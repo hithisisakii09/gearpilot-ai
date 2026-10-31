@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
 const root = new URL('../dist/', import.meta.url);
-const paths = [
+const requiredPaths = [
   'index.html',
   'about/index.html',
   'methodology/index.html',
@@ -14,6 +14,23 @@ const paths = [
   'robots.txt',
   'sitemap.xml',
 ];
+async function collectFiles(directory, prefix = '') {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const path = `${prefix}${entry.name}`;
+    if (entry.isDirectory()) files.push(...await collectFiles(new URL(`${path}/`, root), `${path}/`));
+    else {
+      assert.ok(entry.isFile(), `Unexpected non-file in build: ${path}`);
+      files.push(path);
+    }
+  }
+  return files;
+}
+const paths = (await collectFiles(root)).sort();
+for (const required of requiredPaths) assert.ok(paths.includes(required), `Missing required build file: ${required}`);
+assert.ok(paths.includes('_headers'), 'Missing staging security headers configuration');
+assert.ok(paths.includes('404.html'), 'Missing 404 page');
 const manifest = {
   schemaVersion: 1,
   buildMode: 'private-staging',
