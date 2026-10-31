@@ -37,6 +37,14 @@ describe('read-only promotional evidence audit', () => {
       productId: 'vari-comfortedge-60x30',
     }]);
   });
+  it('rejects impossible calendar dates rather than accepting Date.parse normalization', () => {
+    expect(auditPromotionEvidence({ observations: [observation('2026-02-30T12:00:00Z')] }, clock)).toEqual([{
+      severity: 'blocker',
+      code: 'INVALID_PROMOTION_DEADLINE',
+      observationId: 'vari-promo-1',
+      productId: 'vari-comfortedge-60x30',
+    }]);
+  });
   it('flags evidence captured after the promotion deadline', () => {
     const data = { observations: [observation('2026-11-18T00:00:00Z', { observedAt: '2026-11-19T00:00:00Z' })] };
     expect(auditPromotionEvidence(data, clock)).toEqual([{
