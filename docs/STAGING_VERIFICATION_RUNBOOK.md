@@ -98,3 +98,14 @@ This section supersedes the earlier **hosting discovery** statements that Cloudf
 - `scripts/release-readiness-gate.mjs` is fail-closed: all eight release gates remain `requires_independent_verification` and the verdict remains `NO_GO`.
 
 **Action required before any new staging deployment:** prepare a distinct staging configuration that sends `X-Robots-Tag: noindex, nofollow, noarchive` on all staging responses (including errors and non-HTML where applicable) and uses a staging-only disallowing robots policy; keep Cloudflare Access enforced. Verify with an authenticated request and do not rely on robots.txt alone as an access control. Do not change production/public robots behavior or the existing Worker without separate approval. Track exact build SHA and retain evidence.
+
+## Staging build CI evidence (31 October 2026)
+
+- GitHub PR-branch commit `6fd90b8a549a6fd2340843f9803242b9a3787c76` completed **Verify**, **Evidence audit (read-only)**, and **Global research audit** successfully (workflow runs `41220674694`, `41220674675`, and `41220674721` respectively).
+- The Verify workflow runs the normal build and local browser smoke test first, then a separate `GEARPILOT_STAGING_NOINDEX=true npm run build` and `node scripts/verify-staging-noindex.mjs` against the generated static files.
+- The staging assertion checks seven HTML routes for `noindex,follow`, absence of canonical links, and `robots.txt` containing only `User-agent: *` and `Disallow: /`. This verifies generated build artifacts in CI, **not** live Cloudflare response behavior.
+- The opt-in build variable must be explicitly set for any authorized private staging build. A normal build does not inherit this protection. This guard is defense-in-depth, not authentication.
+- **Still unverified:** staging-specific `X-Robots-Tag: noindex, nofollow, noarchive` on HTML, non-HTML and error responses; exact deployed SHA; authenticated remote header/browser UAT; staged rollback rehearsal; independent approvals. No existing Cloudflare Worker configuration was changed.
+- A future authorized staging deployment must use a separately controlled target and verify Access denial and HTTP headers on that exact target. Do not apply these settings to the current 100%-traffic Worker merely to complete this checklist.
+
+**Phase 4.8 remains NO-GO. This evidence does not authorize production deployment or merging PR #23.**
