@@ -18,6 +18,8 @@ jobs:
       - run: npm ci
       - run: npm test -- --run scripts/agent-research-queue.test.mjs
       - run: node scripts/agent-research-queue.mjs
+      - run: npm test -- --run scripts/research-queue-audit.test.mjs
+      - run: node scripts/research-queue-audit.mjs artifacts/research-queue-$(date -u +%F).json
       - uses: actions/upload-artifact@v4
         with:
           name: global-research-queue
