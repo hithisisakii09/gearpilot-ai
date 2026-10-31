@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "catalog:check": "node scripts/validate-catalog.mjs --catalog src/data/candidates.json --dry-run && node --experimental-strip-types scripts/observations.ts validate --input src/data/observations.json",
+    "audit:promotion": "node scripts/audit-promotion-evidence.mjs",
     "observations:list": "node --experimental-strip-types scripts/observations.ts list",
     "observations:validate": "node --experimental-strip-types scripts/observations.ts validate",
     "observations:preview": "node --experimental-strip-types scripts/observations.ts preview",
