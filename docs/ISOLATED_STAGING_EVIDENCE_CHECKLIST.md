@@ -41,3 +41,14 @@ Use authenticated requests only from an approved operator session. Redact tokens
 - A future reviewer must compare the actual deployment build ID, exact Git SHA, and artifact digests before claiming provenance. Do not infer any match from the Worker name or hostname alone.
 
 **No staging deployment or production release authorized. Phase 4.8 NO-GO remains active.**
+
+## Isolated Cloudflare staging infrastructure evidence (31 October 2026)
+
+- A distinct Worker named `gearpilot-ai-private-staging` was created. It serves only an HTTP 403 placeholder (`Private staging not yet provisioned`), with `Cache-Control: no-store` and `X-Robots-Tag: noindex, nofollow, noarchive` set in the placeholder response code. No Astro site assets have been deployed.
+- A separate self-hosted Cloudflare Access application `GearPilot AI private staging` was created, linked to the new Worker's ID. Its only allow rule matches the owner-supplied email address, rather than the broader Cloudflare-account-member policy on the existing Worker. Do not copy this email into publicly shared evidence.
+- The new Worker's workers.dev subdomain was enabled; preview URLs remain disabled. Its hostname is `gearpilot-ai-private-staging.hithisisakii09.workers.dev`.
+- Independent unauthenticated requests to `/` and `/robots.txt` both returned `login_required`. This is limited evidence for two paths, not a full access-policy audit.
+- The operator supplied a browser screenshot showing `Private staging not yet provisioned` at the staging URL. This supports placeholder reachability in their browser, but does not prove the browser's authenticated identity, the HTTP status code, or response headers.
+- CI for commit `ff415660ec719da922af42d8ac781169795d5866` passed Verify, Evidence audit (read-only), and Global research audit. Draft PR #23 had zero independent reviews when checked.
+- **Still outstanding:** separate approval for actual application staging deployment; exact immutable site artifact provenance; HTTP response-header verification; full anonymous route matrix; authenticated UAT; rollback rehearsal; independent reviews. Do not mark any of these complete from the placeholder checks.
+- **No changes to the existing Worker or its Access policy; no production deployment, merge, spending, or affiliate activation. Phase 4.8 remains NO-GO.**
