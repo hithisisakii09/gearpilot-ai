@@ -11,6 +11,12 @@ describe('multi-country research queue', () => {
     const a = planResearch(markets, { products: [] }, { date: '2026-10-31', batchSize: 3 });
     expect(a).toEqual(planResearch(markets, { products: [] }, { date: '2026-10-31', batchSize: 3 }));
   });
+
+  it('rejects malformed and impossible calendar dates', () => {
+    for (const date of ['2026-2-01', '2026-02-30', 'not-a-date', '2026-13-01']) {
+      expect(() => planResearch(markets, {}, { date })).toThrow('Invalid date');
+    }
+  });
   it('rejects invalid batches', () => {
     expect(() => planResearch(markets, {}, { batchSize: 0 })).toThrow();
   });
