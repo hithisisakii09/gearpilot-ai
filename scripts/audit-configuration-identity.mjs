@@ -4,8 +4,12 @@ import { resolve } from 'node:path';
 
 /** Read-only checks for research configuration identity. Never promotes offers. */
 export function auditConfigurationIdentity(candidates, observationData) {
-  const products = new Map((candidates.products ?? []).map((p) => [p.id, p]));
   const findings = [];
+  const products = new Map();
+  for (const product of candidates.products ?? []) {
+    if (products.has(product.id)) findings.push({ severity: 'blocker', code: 'DUPLICATE_CATALOG_PRODUCT_ID', productId: product.id });
+    else products.set(product.id, product);
+  }
   for (const assessment of observationData.candidateAssessments ?? []) {
     const product = products.get(assessment.productId);
     if (!product) {
