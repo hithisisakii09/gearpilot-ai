@@ -27,3 +27,12 @@ Run tests, build, read-only audits, research preparation, documentation, and sta
 ## Machine-readable status
 
 Run `npm run release:readiness` for a read-only fail-closed report. Its verdict remains `NO_GO` while Phase 4.8 is active, even if supplied booleans claim approval. No automatic approval or deployment path is provided.
+
+## 31 October 2026 — evidence separation and reviewer assignment
+
+- Branch Duo assessment for 36×24 is explicitly quarantined in `src/data/observations.json`; the catalog's 48×24 record is unchanged. This resolves the immediate risk of silent evidence reuse, **not** the factual identity discrepancy or independent review.
+- Reviewer roles required: collector (source capture), approver A, approver B, and independent code reviewer. Approver A and B must be distinct authenticated people, neither may be the collector, and no agent may impersonate them.
+- Reviewer assignment: **OPEN**. Repository access and availability must be confirmed by real invitees. The project owner granting general authority does not constitute independent approval.
+- Evidence storage: **NOT VERIFIED**. Do not store source screenshots, personal data, tokens, or sensitive evidence in the repository. A private encrypted versioned store and an auditable review record must be demonstrated before closing the gate.
+- Pilot Vari Essential 48×24 SKU 401512: remains pending independent verification; existing research is not an approved offer.
+- Staging and rollback: **NOT VERIFIED**. Record deployed-origin tests, timestamps, environment, rollback rehearsal and reviewer signatures before marking complete.
