@@ -45,6 +45,21 @@ describe('read-only promotional evidence audit', () => {
       productId: 'vari-comfortedge-60x30',
     }]);
   });
+  it('rejects normalized midnight and out-of-range clock fields', () => {
+    for (const deadline of ['2026-11-18T24:00:00Z', '2026-11-18T23:60:00Z', '2026-11-18T23:59:60Z']) {
+      expect(auditPromotionEvidence({ observations: [observation(deadline)] }, clock)).toEqual([
+        expect.objectContaining({ code: 'INVALID_PROMOTION_DEADLINE' }),
+      ]);
+    }
+  });
+  it('rejects invalid UTC offsets but accepts a valid offset', () => {
+    for (const deadline of ['2026-11-18T12:00:00+15:00', '2026-11-18T12:00:00+14:01', '2026-11-18T12:00:00-01:60']) {
+      expect(auditPromotionEvidence({ observations: [observation(deadline)] }, clock)).toEqual([
+        expect.objectContaining({ code: 'INVALID_PROMOTION_DEADLINE' }),
+      ]);
+    }
+    expect(auditPromotionEvidence({ observations: [observation('2026-11-18T12:00:00+05:30')] }, clock)).toEqual([]);
+  });
   it('flags evidence captured after the promotion deadline', () => {
     const data = { observations: [observation('2026-11-18T00:00:00Z', { observedAt: '2026-11-19T00:00:00Z' })] };
     expect(auditPromotionEvidence(data, clock)).toEqual([{
