@@ -21,5 +21,7 @@ jobs:
       - run: npm test -- --run scripts/audit-configuration-identity.test.mjs
       - name: Produce research-only findings
         run: node scripts/audit-configuration-identity.mjs
+      - name: Report production readiness (read-only; expected NO_GO)
+        run: npm run release:readiness
       - name: Verify repository typecheck
         run: npm run check
