@@ -54,6 +54,10 @@ describe('read-only configuration identity audit', () => {
       { severity: 'blocker', code: 'MISSING_OBSERVATION_PRODUCT_ID' },
     ]);
   });
+  it('blocks assessment records explicitly missing exact configuration evidence', () => {
+    const findings = auditConfigurationIdentity({ products: [{ id: 'desk' }] }, { candidateAssessments: [{ productId: 'desk', missingEvidence: ['exact_configuration'] }] });
+    expect(findings).toEqual([{ severity: 'blocker', code: 'ASSESSMENT_CONFIGURATION_EVIDENCE_MISSING', productId: 'desk' }]);
+  });
   it('reports unknown products as findings for human review', () => {
     const findings = auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'unmapped' }] });
     expect(findings).toEqual([{ severity: 'warning', code: 'UNKNOWN_PRODUCT', productId: 'unmapped' }]);
