@@ -25,3 +25,33 @@ jobs:
       - run: npm audit
       - run: npx playwright install --with-deps chromium
       - run: npm run smoke
+      - name: Validate normal build SEO and robots (no deploy)
+        run: node scripts/verify-normal-seo.mjs
+      - name: Validate private staging noindex build (no deploy)
+        run: |
+          GEARPILOT_STAGING_NOINDEX=true npm run build
+          node scripts/verify-staging-noindex.mjs
+          printf '\n/*\n  X-Robots-Tag: noindex, nofollow, noarchive\n' >> dist/_headers
+          node scripts/verify-staging-response-headers.mjs
+          node scripts/verify-private-staging-target.mjs
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node scripts/staging-artifact-inventory.mjs > staging-artifact-inventory.json
+          node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync("staging-artifact-inventory.json","utf8")); if(m.gitSha!==process.env.GITHUB_SHA) process.exit(1); m.sourceBranchHeadSha=process.env.PR_HEAD_SHA||process.env.GITHUB_SHA; m.githubEventName=process.env.GITHUB_EVENT_NAME; fs.writeFileSync("staging-artifact-inventory.json",JSON.stringify(m,null,2)+"\n")'
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - name: Exercise artifact preflight against exact build files (no deploy)
+        run: |
+          mkdir -p preflight-input/gearpilot-private-staging-local
+          cp -a dist preflight-input/gearpilot-private-staging-local/dist
+          cp staging-artifact-inventory.json preflight-input/gearpilot-private-staging-local/
+          node scripts/verify-downloaded-staging-artifact.mjs preflight-input
+          node scripts/deploy-private-staging.mjs --plan preflight-input/gearpilot-private-staging-local
+      - name: Upload validated private staging artifact (no deploy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: gearpilot-private-staging-${{ github.sha }}
+          path: |
+            dist/
+            staging-artifact-inventory.json
+          if-no-files-found: error
+          retention-days: 7

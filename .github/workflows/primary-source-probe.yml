@@ -1,0 +1,27 @@
+name: Manufacturer source probe (manual, non-publishing)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --run scripts/primary-source-probe.test.mjs
+      - run: npm test -- --run scripts/source-authorization.test.mjs
+      - run: node scripts/build-source-manifest.mjs
+      - run: node scripts/primary-source-probe.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manufacturer-probe-dry-run
+          path: |
+            artifacts/primary-source-probes.json
+            artifacts/source-authorization-manifest.json
+          retention-days: 7

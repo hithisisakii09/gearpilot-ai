@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "scope": "research_only",
+  "notes": "Markets are research targets, not publication permissions. Local currency, consumer law, tax, merchant shipping and affiliate consent must be verified per market.",
+  "markets": [
+    {
+      "country": "US",
+      "currency": "USD",
+      "language": "en",
+      "region": "North America"
+    },
+    {
+      "country": "CA",
+      "currency": "CAD",
+      "language": "en",
+      "region": "North America"
+    },
+    {
+      "country": "GB",
+      "currency": "GBP",
+      "language": "en",
+      "region": "Europe"
+    },
+    {
+      "country": "DE",
+      "currency": "EUR",
+      "language": "de",
+      "region": "Europe"
+    },
+    {
+      "country": "FR",
+      "currency": "EUR",
+      "language": "fr",
+      "region": "Europe"
+    },
+    {
+      "country": "IN",
+      "currency": "INR",
+      "language": "en",
+      "region": "Asia"
+    },
+    {
+      "country": "AU",
+      "currency": "AUD",
+      "language": "en",
+      "region": "Oceania"
+    },
+    {
+      "country": "JP",
+      "currency": "JPY",
+      "language": "ja",
+      "region": "Asia"
+    },
+    {
+      "country": "SG",
+      "currency": "SGD",
+      "language": "en",
+      "region": "Asia"
+    },
+    {
+      "country": "AE",
+      "currency": "AED",
+      "language": "en",
+      "region": "Middle East"
+    },
+    {
+      "country": "BR",
+      "currency": "BRL",
+      "language": "pt",
+      "region": "South America"
+    },
+    {
+      "country": "ZA",
+      "currency": "ZAR",
+      "language": "en",
+      "region": "Africa"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+name: Private staging artifact preflight (no deploy)
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: 'Successful Verify workflow run ID containing the staging artifact'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download exact CI artifact (read-only)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.artifact_run_id }}
+          pattern: gearpilot-private-staging-*
+          merge-multiple: false
+          path: downloaded
+          github-token: ${{ github.token }}
+      - name: Validate archive layout, inventory and headers (no deploy)
+        run: node scripts/verify-downloaded-staging-artifact.mjs downloaded
+      - name: Confirm this workflow cannot deploy
+        run: |
+          echo 'Preflight only: no Cloudflare credentials, no Wrangler deploy, no production access.'

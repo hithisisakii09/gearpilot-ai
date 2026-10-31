@@ -1,0 +1,28 @@
+name: Evidence audit (read-only)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Test configuration audit and release gate
+        run: npm test -- --run scripts/audit-configuration-identity.test.mjs scripts/release-readiness-gate.test.mjs
+      - name: Produce research-only findings
+        run: node scripts/audit-configuration-identity.mjs
+      - name: Report production readiness (read-only; expected NO_GO)
+        run: npm run release:readiness
+      - name: Verify repository typecheck
+        run: npm run check
