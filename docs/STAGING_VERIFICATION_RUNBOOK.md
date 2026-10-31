@@ -33,3 +33,26 @@ This runbook is for a **private, access-controlled staging preview only**. The P
 | Production verdict | **NO-GO** |
 
 A completed staging runbook is necessary but insufficient: evidence storage, independent review quorum, merchant/compliance checks, and explicit separate launch approval are still required.
+
+## Staging evidence handoff template
+
+Use one record per staging build. Never mark a test passed without its actual output and reviewer identity.
+
+| Field | Required evidence |
+| --- | --- |
+| Deployment | Preview URL, Git SHA, provider build ID, UTC timestamp |
+| Access | Authenticated test result and unauthenticated denial result |
+| Browsers | Browser version, device viewport, screenshots or sanitized logs |
+| Security | TLS and response headers, secret exposure check, robots/noindex verification |
+| Functionality | Navigation, search/filter, disclosure, privacy, contact, 404 and unapproved-offer checks |
+| Recovery | Staging rollback command, previous build ID, outcome, operator |
+| Review | Distinct authenticated reviewer IDs and dated approvals |
+
+### Release blockers to file separately
+
+- Branch Duo 36×24 research assessment cannot substantiate the 48×24 catalog variant. Preserve quarantine and seek variant-specific source evidence.
+- Two independent approvers and a separate evidence collector are not assigned; request authenticated invitations without inventing identities.
+- Private encrypted versioned evidence storage is not demonstrated.
+- A deployed staging origin and rollback rehearsal have not been evidenced.
+
+No unchecked row in this document can be satisfied by a CI green check alone.
