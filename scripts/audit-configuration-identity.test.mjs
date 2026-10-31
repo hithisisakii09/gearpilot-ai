@@ -24,6 +24,10 @@ describe('read-only configuration identity audit', () => {
     const data = { candidateAssessments: [{ productId: 'branch-duo-standing-desk', exactConfiguration: { desktopWidthInches: NaN, desktopDepthInches: 24 } }] };
     expect(auditConfigurationIdentity(candidate, data)).toEqual([]);
   });
+  it('reports unknown products as findings for human review', () => {
+    const findings = auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'unmapped' }] });
+    expect(findings).toEqual([{ severity: 'warning', code: 'UNKNOWN_PRODUCT', productId: 'unmapped' }]);
+  });
   it('reports unknown candidate IDs without mutating inputs', () => {
     const data = { candidateAssessments: [{ productId: 'unknown', exactConfiguration: null }] };
     expect(auditConfigurationIdentity(candidate, data)[0].code).toBe('UNKNOWN_PRODUCT');
