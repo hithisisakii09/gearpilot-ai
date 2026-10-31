@@ -49,8 +49,9 @@ export async function probeTargets(targets, { resolver = lookup, fetcher = fetch
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const catalog = JSON.parse(readFileSync(new URL('../src/data/candidates.json', import.meta.url), 'utf8'));
   const targets = buildProbeTargets(catalog);
-  const live = process.argv.includes('--live');
-  const results = live ? await probeTargets(targets) : targets.map(t => ({ ...t, status: 'dry_run', publicationAuthorized: false }));
+  if (process.argv.includes('--live')) throw new Error('Live probes disabled until DNS-pinned transport and source authorization are implemented');
+  const live = false;
+  const results = targets.map(t => ({ ...t, status: 'dry_run', publicationAuthorized: false }));
   const output = resolve('artifacts/primary-source-probes.json');
   mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, JSON.stringify({ live, results, publicationAuthorized: false }, null, 2) + '\n');
