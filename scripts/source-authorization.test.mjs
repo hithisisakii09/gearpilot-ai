@@ -1,0 +1,8 @@
+import { describe, it, expect } from 'vitest';
+import { normalizeAuthorizedSource, createAuthorizedSourceManifest, auditSourceManifest } from './source-authorization.mjs';
+describe('source authorization safety', () => {
+  it('rejects local and credentialed URLs', () => { expect(normalizeAuthorizedSource('https://127.0.0.1/x')).toBeNull(); expect(normalizeAuthorizedSource('https://u:p@example.com/')).toBeNull(); expect(normalizeAuthorizedSource('https://localhost/x')).toBeNull(); });
+  it('deduplicates market-specific source URLs', () => { const manifest = createAuthorizedSourceManifest({ products: [{ id: 'a', market: 'US', officialManufacturerUrl: 'https://example.com/desk' }, { id: 'b', market: 'US', officialManufacturerUrl: 'https://example.com/desk' }, { id: 'c', market: 'IN', officialManufacturerUrl: 'https://example.com/desk' }] }); expect(manifest.sources).toHaveLength(2); expect(auditSourceManifest(manifest).valid).toBe(true); });
+  it('never treats discovered sources as authorized', () => { const manifest = createAuthorizedSourceManifest({ products: [{ id: 'a', market: 'US', officialManufacturerUrl: 'https://example.com/' }] }); expect(manifest.sources[0]).toMatchObject({ authorizationStatus: 'not_verified', liveFetchAllowed: false, publicationAuthorized: false }); });
+  it('rejects any unauthorized state transition', () => { const manifest = createAuthorizedSourceManifest({ products: [{ id: 'a', market: 'US', officialManufacturerUrl: 'https://example.com/' }] }); manifest.sources[0].liveFetchAllowed = true; expect(auditSourceManifest(manifest).findings[0].code).toBe('UNAUTHORIZED_STATE'); });
+});
