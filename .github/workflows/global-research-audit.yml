@@ -1,0 +1,22 @@
+name: Global research audit
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  research-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --run scripts/global-market-audit.test.mjs
+      - run: node scripts/global-market-audit.mjs
+      - run: npm run catalog:check
