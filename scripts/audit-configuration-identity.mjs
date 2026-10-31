@@ -18,6 +18,30 @@ export function auditConfigurationIdentity(candidates, observationData) {
     if (products.has(product.id)) findings.push({ severity: 'blocker', code: 'DUPLICATE_CATALOG_PRODUCT_ID', productId: product.id });
     else products.set(product.id, product);
   }
+  for (const observation of observationData.observations ?? []) {
+    if (!observation || typeof observation !== 'object') {
+      findings.push({ severity: 'blocker', code: 'INVALID_OBSERVATION_RECORD' });
+      continue;
+    }
+    if (typeof observation.productId !== 'string' || !observation.productId.trim()) {
+      findings.push({ severity: 'blocker', code: 'MISSING_OBSERVATION_PRODUCT_ID' });
+      continue;
+    }
+    const product = products.get(observation.productId);
+    if (!product) {
+      findings.push({ severity: 'warning', code: 'UNKNOWN_OBSERVATION_PRODUCT', productId: observation.productId });
+      continue;
+    }
+    for (const field of ['desktopWidthInches', 'desktopDepthInches']) {
+      const expected = product.specifications?.[field];
+      const observed = observation.configuration?.[field];
+      if (observed !== undefined && !Number.isFinite(observed)) {
+        findings.push({ severity: 'warning', code: 'INVALID_OBSERVATION_DIMENSION', productId: observation.productId, field });
+      } else if (Number.isFinite(expected) && Number.isFinite(observed) && expected !== observed) {
+        findings.push({ severity: 'blocker', code: 'OBSERVATION_CONFIGURATION_MISMATCH', productId: observation.productId, field, catalog: expected, observation: observed });
+      }
+    }
+  }
   const assessmentIds = new Set();
   for (const assessment of observationData.candidateAssessments ?? []) {
     if (!assessment || typeof assessment !== 'object') {
