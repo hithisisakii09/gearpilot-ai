@@ -58,6 +58,9 @@ export function auditConfigurationIdentity(candidates, observationData) {
       if (assessmentIds.has(identity)) findings.push({ severity: 'warning', code: 'DUPLICATE_ASSESSMENT_CONFIGURATION', productId: assessment.productId, configurationId });
       else assessmentIds.add(identity);
     }
+    if (assessment.missingEvidence?.includes('exact_configuration')) {
+      findings.push({ severity: 'blocker', code: 'ASSESSMENT_CONFIGURATION_EVIDENCE_MISSING', productId: assessment.productId });
+    }
     const product = products.get(assessment.productId);
     if (!product) {
       findings.push({ severity: 'warning', code: 'UNKNOWN_PRODUCT', productId: assessment.productId });
