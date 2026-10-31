@@ -106,11 +106,9 @@
       "missingEvidence": [
         "mandatory_shipping",
         "human_review",
-        "catalog_configuration_identity",
-        "independent_variant_verification"
+        "exact_configuration"
       ],
-      "notes": "Owner-confirmed configuration; collector akhil supplied manufacturer-page observation timestamp 2026-10-29T17:12:00Z. The page displayed USD 549 and Available; these are page claims only, not checkout-confirmed price or guaranteed stock. SKU is unknown. Destination-specific shipping is unknown. Independent review is pending. No manufacturer observation or commercial offer has been created. Quarantined from catalog promotion: assessment describes 36x24, while catalog record is 48x24. Preserve both source claims until separately verified; do not transfer price or availability between variants.",
-      "reviewStatus": "quarantined_configuration_mismatch"
+      "notes": "Owner-confirmed configuration; collector akhil supplied manufacturer-page observation timestamp 2026-10-29T17:12:00Z. The page displayed USD 549 and Available; these are page claims only, not checkout-confirmed price or guaranteed stock. SKU is unknown. Destination-specific shipping is unknown. Independent review is pending. No manufacturer observation or commercial offer has been created. Quarantined from catalog promotion: assessment describes 36x24, while catalog record is 48x24. Preserve both source claims until separately verified; do not transfer price or availability between variants. The required exact_configuration evidence remains missing under the validated assessment schema."
     },
     {
       "productId": "flexispot-e7",
