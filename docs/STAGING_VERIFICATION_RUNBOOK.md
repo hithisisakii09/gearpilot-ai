@@ -89,3 +89,12 @@ This section supersedes the earlier **hosting discovery** statements that Cloudf
 4. Confirm independent reviewer identities, two authenticated approvers and separate evidence collector, encrypted versioned private evidence storage, merchant compliance, and explicit launch approval.
 
 **Phase 4.8 hold remains active. Production verdict: NO-GO.**
+
+## Indexing and deployment-source inspection (31 October 2026)
+
+- The staging-branch source file `src/pages/robots.txt.ts` exists (even though `public/robots.txt` does not) and generates `User-agent: *`, `Allow: /`, and a sitemap URL for the `workers.dev` origin. This is **crawl-permissive**, not a private-staging noindex control. Anonymous requests to the currently protected `/robots.txt` returned `login_required`, so the live file content could not be independently compared to the branch.
+- The branch's `astro.config.mjs` uses `output: 'static'`, sets the Worker hostname as the site URL, and enables trailing slashes. No root `wrangler.toml` was found. Neither fact proves how the existing Worker was deployed.
+- `.github/workflows/verify.yml` runs install, unit tests, Astro check, catalog check, build, dependency audit, and local Playwright smoke tests. The smoke script's localhost run does not replace authenticated remote UAT.
+- `scripts/release-readiness-gate.mjs` is fail-closed: all eight release gates remain `requires_independent_verification` and the verdict remains `NO_GO`.
+
+**Action required before any new staging deployment:** prepare a distinct staging configuration that sends `X-Robots-Tag: noindex, nofollow, noarchive` on all staging responses (including errors and non-HTML where applicable) and uses a staging-only disallowing robots policy; keep Cloudflare Access enforced. Verify with an authenticated request and do not rely on robots.txt alone as an access control. Do not change production/public robots behavior or the existing Worker without separate approval. Track exact build SHA and retain evidence.
