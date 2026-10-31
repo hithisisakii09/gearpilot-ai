@@ -25,3 +25,7 @@ jobs:
       - run: npm audit
       - run: npx playwright install --with-deps chromium
       - run: npm run smoke
+      - name: Validate private staging noindex build (no deploy)
+        run: |
+          GEARPILOT_STAGING_NOINDEX=true npm run build
+          node scripts/verify-staging-noindex.mjs
