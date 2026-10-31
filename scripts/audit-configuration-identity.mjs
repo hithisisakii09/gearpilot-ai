@@ -17,7 +17,7 @@ export function auditConfigurationIdentity(candidates, observationData) {
     for (const [field, label] of [['desktopWidthInches', 'width'], ['desktopDepthInches', 'depth']]) {
       const expected = product.specifications?.[field];
       const observed = config[field];
-      if (typeof expected === 'number' && typeof observed === 'number' && expected !== observed) {
+      if (Number.isFinite(expected) && Number.isFinite(observed) && expected !== observed) {
         findings.push({ severity: 'blocker', code: 'CONFIGURATION_MISMATCH', productId: assessment.productId, field: label, catalog: expected, assessment: observed, configurationId: config.id ?? null });
       }
     }
