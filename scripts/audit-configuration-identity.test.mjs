@@ -20,9 +20,9 @@ describe('read-only configuration identity audit', () => {
   it('does not flag a matching configuration', () => {
     expect(auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'branch-duo-standing-desk', exactConfiguration: { desktopWidthInches: 48, desktopDepthInches: 24 } }] })).toEqual([]);
   });
-  it('does not flag missing or nonfinite dimensions as mismatches', () => {
+  it('reports nonfinite observed dimensions as warnings, not mismatches', () => {
     const data = { candidateAssessments: [{ productId: 'branch-duo-standing-desk', exactConfiguration: { desktopWidthInches: NaN, desktopDepthInches: 24 } }] };
-    expect(auditConfigurationIdentity(candidate, data)).toEqual([]);
+    expect(auditConfigurationIdentity(candidate, data)).toEqual([{ severity: 'warning', code: 'INVALID_ASSESSMENT_DIMENSION', productId: 'branch-duo-standing-desk', field: 'width', configurationId: null }]);
   });
   it('reports unknown products as findings for human review', () => {
     const findings = auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'unmapped' }] });
