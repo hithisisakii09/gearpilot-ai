@@ -117,6 +117,12 @@ async function checkProtection() {
   const worker = await api('GET', prefix + '/workers/workers/' + encodeURIComponent(workerId));
   assert.equal(worker.id, workerId, 'Staging worker ID changed');
   assert.equal(worker.name, WORKER, 'Staging worker ID unexpectedly maps to a different Worker');
+  assert.deepEqual(worker.references?.domains ?? [], [],
+    'Private staging must not be linked to any custom domain');
+  assert.equal(worker.subdomain?.url, HOST,
+    'Unexpected staging hostname: refusing deployment');
+  assert.equal(worker.subdomain?.previews_enabled, false,
+    'Worker-level preview URL must remain disabled');
   const app = await api('GET', prefix + '/access/apps/' + encodeURIComponent(accessAppId));
   assertAccess(app);
   const subdomain = await api('GET', prefix + '/workers/scripts/' + WORKER + '/subdomain');
