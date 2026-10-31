@@ -9,7 +9,9 @@ interface Props {
 }
 
 const { title, description, canonicalPath, indexable = true } = Astro.props;
-// Build-time staging safeguard. Does not replace Cloudflare Access or HTTP X-Robots-Tag.\nconst stagingNoindex = import.meta.env.GEARPILOT_STAGING_NOINDEX === 'true';\nconst metadata = createSeoMetadata(title, description, stagingNoindex ? null : canonicalPath, stagingNoindex ? false : indexable);
+// Build-time staging safeguard. Does not replace Cloudflare Access or HTTP X-Robots-Tag.
+const stagingNoindex = import.meta.env.GEARPILOT_STAGING_NOINDEX === 'true';
+const metadata = createSeoMetadata(title, description, stagingNoindex ? null : canonicalPath, stagingNoindex ? false : indexable);
 ---
 <title>{title}</title>
 <meta name="description" content={description} />
