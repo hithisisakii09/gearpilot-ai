@@ -1,0 +1,25 @@
+name: Global research queue
+on:
+  schedule:
+    - cron: '41 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --run scripts/agent-research-queue.test.mjs
+      - run: node scripts/agent-research-queue.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: global-research-queue
+          path: artifacts/research-queue-*.json
+          retention-days: 14
