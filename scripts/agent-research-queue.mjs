@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 
 export function planResearch(registry, catalog, { date = new Date().toISOString().slice(0, 10), batchSize = 12 } = {}) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) throw new Error('Invalid date');
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date + 'T00:00:00Z')) || new Date(date + 'T00:00:00Z').toISOString().slice(0, 10) !== date) throw new Error('Invalid date');
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 100) throw new Error('Invalid batchSize');
   const markets = registry.markets ?? [];
   if (!markets.length) return [];
