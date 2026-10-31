@@ -31,7 +31,11 @@ jobs:
         run: |
           GEARPILOT_STAGING_NOINDEX=true npm run build
           node scripts/verify-staging-noindex.mjs
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           node scripts/staging-artifact-inventory.mjs > staging-artifact-inventory.json
+          node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync("staging-artifact-inventory.json","utf8")); if(m.gitSha!==process.env.GITHUB_SHA) process.exit(1); m.sourceBranchHeadSha=process.env.PR_HEAD_SHA||process.env.GITHUB_SHA; m.githubEventName=process.env.GITHUB_EVENT_NAME; fs.writeFileSync("staging-artifact-inventory.json",JSON.stringify(m,null,2)+"\n")'
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       - name: Upload validated private staging artifact (no deploy)
         uses: actions/upload-artifact@v4
         with:
