@@ -17,6 +17,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test -- --run scripts/agent-research-queue.test.mjs
+      - run: npm test -- --run scripts/research-evidence-intake.test.mjs
       - run: node scripts/agent-research-queue.mjs
       - run: npm test -- --run scripts/research-queue-audit.test.mjs
       - run: node scripts/research-queue-audit.mjs artifacts/research-queue-$(date -u +%F).json
