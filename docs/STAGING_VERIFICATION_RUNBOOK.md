@@ -56,3 +56,11 @@ Use one record per staging build. Never mark a test passed without its actual ou
 - A deployed staging origin and rollback rehearsal have not been evidenced.
 
 No unchecked row in this document can be satisfied by a CI green check alone.
+
+## Hosting discovery and verification (31 October 2026)
+
+- The Astro configuration in the separate promotion-audit branch references `https://gearpilot-ai.hithisisakii09.workers.dev` as its canonical site. This is a configuration value, **not** verified proof of deployment, ownership, access control, or staging readiness.
+- Searches for a GearPilot-named project in both connected Vercel accounts returned no matches. This does not establish whether another provider hosts the site.
+- No authenticated Cloudflare deployment connection was available for verifying that Workers hostname, its deployment SHA, preview restrictions, or rollback capabilities.
+- **Required next action:** the authorized hosting operator identifies the actual hosting provider/account, confirms private preview access, and records provider deployment ID, exact commit SHA, UTC deployment time, authenticated access and unauthenticated denial before remote UAT. Do not enter secrets or credentials in GitHub issues.
+- **Evidence state:** hosting and live staging remain **unverified**. No production deployment or permission to publish is implied.
