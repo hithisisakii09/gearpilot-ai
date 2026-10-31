@@ -4,7 +4,8 @@ Status: **NOT APPROVED FOR PRODUCTION**. This checklist is an engineering handof
 
 ## Automated evidence (last verified)
 
-- Commit `3ed98e7b77e8caa9c3b0d83a9cc2752514836cf1`: Verify run 41169982151, Evidence audit run 41169982227, Global research audit run 41169982032 — all successful.
+- Commit `2abdc9624ef3b5f85c3e4abb8f286d88aebe3226`: Verify run 41179549831, Evidence audit run 41179549759, Global research audit run 41179549778 — all successful.
+- These checks include unit tests, catalog audit, build, dependency audit and local Chromium smoke testing. They do not verify deployed staging or approve a release.
 - Subsequent commits require fresh workflow checks. Green CI alone is not a launch approval.
 
 ## Required before production release
