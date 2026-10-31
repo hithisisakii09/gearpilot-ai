@@ -44,6 +44,16 @@ describe('read-only configuration identity audit', () => {
       { severity: 'blocker', code: 'INVALID_ASSESSMENT_RECORD' },
     ]);
   });
+  it('blocks actual offer observations with mismatched dimensions', () => {
+    const findings = auditConfigurationIdentity({ products: [{ id: 'desk', specifications: { desktopWidthInches: 48, desktopDepthInches: 24 } }] }, { observations: [{ productId: 'desk', configuration: { desktopWidthInches: 36, desktopDepthInches: 24 } }] });
+    expect(findings).toEqual([{ severity: 'blocker', code: 'OBSERVATION_CONFIGURATION_MISMATCH', productId: 'desk', field: 'desktopWidthInches', catalog: 48, observation: 36 }]);
+  });
+  it('blocks malformed observations without crashing', () => {
+    expect(auditConfigurationIdentity({ products: [] }, { observations: [null, {}] })).toEqual([
+      { severity: 'blocker', code: 'INVALID_OBSERVATION_RECORD' },
+      { severity: 'blocker', code: 'MISSING_OBSERVATION_PRODUCT_ID' },
+    ]);
+  });
   it('reports unknown products as findings for human review', () => {
     const findings = auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'unmapped' }] });
     expect(findings).toEqual([{ severity: 'warning', code: 'UNKNOWN_PRODUCT', productId: 'unmapped' }]);
