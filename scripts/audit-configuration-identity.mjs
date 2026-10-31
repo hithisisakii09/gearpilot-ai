@@ -7,6 +7,10 @@ export function auditConfigurationIdentity(candidates, observationData) {
   const findings = [];
   const products = new Map();
   for (const product of candidates.products ?? []) {
+    if (typeof product.id !== 'string' || !product.id.trim()) {
+      findings.push({ severity: 'blocker', code: 'MISSING_CATALOG_PRODUCT_ID' });
+      continue;
+    }
     if (products.has(product.id)) findings.push({ severity: 'blocker', code: 'DUPLICATE_CATALOG_PRODUCT_ID', productId: product.id });
     else products.set(product.id, product);
   }
