@@ -42,12 +42,16 @@ for (const item of inventory.paths) {
   assert.equal(contents.length, item.bytes, 'Byte length mismatch: ' + item.path);
   assert.equal(digest, item.sha256, 'SHA-256 mismatch: ' + item.path);
   const hash = digest.slice(0, 32);
-  assert.ok(!assetFiles.has(hash), 'Truncated hash collision in asset manifest');
+  const existing = assetFiles.get(hash);
+  assert.ok(!existing || existing.sha256 === digest, 'Truncated hash collision in asset manifest');
   const mime = item.path.endsWith('.html') ? 'text/html; charset=utf-8' :
     item.path.endsWith('.js') ? 'text/javascript; charset=utf-8' :
     item.path.endsWith('.xml') ? 'application/xml; charset=utf-8' : 'text/plain; charset=utf-8';
-  assetManifest['/' + item.path] = { hash, size: contents.length };
-  assetFiles.set(hash, { contents, mime });
+  // Cloudflare processes _headers as deployment metadata, not a public static asset.
+  if (item.path !== '_headers') {
+    assetManifest['/' + item.path] = { hash, size: contents.length };
+    if (!existing) assetFiles.set(hash, { contents, mime, sha256: digest });
+  }
 }
 for (const required of ['index.html', '404.html', 'robots.txt', '_headers', 'sitemap.xml']) {
   assert.ok(actualPaths.includes(required), 'Required staging file missing: ' + required);
@@ -59,7 +63,8 @@ assert.match((await readFile(path.join(dist, 'robots.txt'), 'utf8')), /Disallow:
 assert.match((await readFile(path.join(dist, 'index.html'), 'utf8')), /noindex/i);
 
 const plan = { mode, target: WORKER, sourceCommit: inventory.sourceBranchHeadSha,
-  buildCommit: inventory.gitSha, fileCount: actualPaths.length, bytes: inventory.paths.reduce((n, x) => n + x.bytes, 0),
+  buildCommit: inventory.gitSha, verifiedFileCount: actualPaths.length, servedAssetCount: Object.keys(assetManifest).length,
+  bytes: inventory.paths.reduce((n, x) => n + x.bytes, 0),
   hashMethod: 'first 16 bytes of SHA-256', publicProductionTouched: false };
 if (mode === '--plan') {
   console.log(JSON.stringify({ status: 'LOCAL_STAGING_DEPLOY_PLAN_PASS', ...plan }, null, 2));
@@ -109,6 +114,9 @@ function assertAccess(app) {
   assert.equal((policy.exclude ?? []).length, 0);
 }
 async function checkProtection() {
+  const worker = await api('GET', prefix + '/workers/workers/' + encodeURIComponent(workerId));
+  assert.equal(worker.id, workerId, 'Staging worker ID changed');
+  assert.equal(worker.name, WORKER, 'Staging worker ID unexpectedly maps to a different Worker');
   const app = await api('GET', prefix + '/access/apps/' + encodeURIComponent(accessAppId));
   assertAccess(app);
   const subdomain = await api('GET', prefix + '/workers/scripts/' + WORKER + '/subdomain');
