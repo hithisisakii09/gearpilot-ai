@@ -64,3 +64,28 @@ No unchecked row in this document can be satisfied by a CI green check alone.
 - No authenticated Cloudflare deployment connection was available for verifying that Workers hostname, its deployment SHA, preview restrictions, or rollback capabilities.
 - **Required next action:** the authorized hosting operator identifies the actual hosting provider/account, confirms private preview access, and records provider deployment ID, exact commit SHA, UTC deployment time, authenticated access and unauthenticated denial before remote UAT. Do not enter secrets or credentials in GitHub issues.
 - **Evidence state:** hosting and live staging remain **unverified**. No production deployment or permission to publish is implied.
+
+## Cloudflare private-preview evidence addendum (31 October 2026)
+
+This section supersedes the earlier **hosting discovery** statements that Cloudflare was not connected and hosting was unverified. It does **not** mark any unchecked operator checklist items complete, authorize a release, or prove the deployed build matches this PR.
+
+### Provider-confirmed, read-only evidence
+
+- Cloudflare account contains Worker `gearpilot-ai`; its `workers.dev` subdomain and preview URLs are enabled.
+- Worker deployment ID: `466a3ac9-245a-48f1-9be2-b124805b2851`, created `2026-10-29T18:20:29.183569Z`, serving Worker version `e82211a7-06d4-446a-b521-df95c2f0afb2` (version number 22) at 100% traffic.
+- Deployment and version metadata identify Wrangler as the source, **not** the GitHub commit SHA. Exact source-to-deployment correspondence is **unverified**. This is an existing deployment, not a staging deployment performed for this PR.
+- Cloudflare Access API responded successfully. Access application `gearpilot-ai - Cloudflare Workers` is self-hosted with a 24-hour session. Its Allow policy is `Cloudflare account members`, which may be broader than a single named authorized email; policy scope requires owner review.
+- The user reported that the unauthenticated incognito browser showed the Cloudflare login and authenticated login reached the homepage. Independently, anonymous requests for `/` and `/robots.txt` returned `login_required` through a remote fetch service. These are limited tests, not a full route-by-route bypass assessment.
+- The user reported six functional browser checks passed: homepage, comparison, research/product pages, disclosures/privacy, unknown-page 404, and mobile layout. Browser version, screenshots, viewport dimensions, and immutable logs were not provided; classify as **operator-reported, not independently reproduced**.
+- The protected origin prevented anonymous inspection of site response headers and robots directives. HTTPS certificate, CSP/HSTS and other headers, noindex/canonical behavior, secrets exposure, keyboard navigation, form handling, and remote browser automation remain **unverified**.
+- Cloudflare Logpush was disabled when checked. This is not automatically a failure under the ₹0 budget; evidence of a working monitoring and incident route remains required.
+- GitHub CI on commit `fc51fb241f884c4bd40208068c0047d848d9dbf4` reported Verify, Evidence audit (read-only), and Global research audit successful. This is **not** proof that the deployed Worker contains that commit. PR #23 and PR #26 had no submitted reviews when checked.
+
+### Remaining gating actions (no production authorization)
+
+1. Obtain a verifiable deployment-to-Git-SHA mapping and immutable build logs; deploy a reviewed commit only to an approved isolated staging target if separately authorized.
+2. Capture authenticated staging response headers, certificate, robots/noindex/canonical, source/network secret-exposure and accessibility evidence without exposing credentials.
+3. Plan and separately authorize a staging-only rollback rehearsal; do not roll back the existing 100%-traffic Worker as a substitute.
+4. Confirm independent reviewer identities, two authenticated approvers and separate evidence collector, encrypted versioned private evidence storage, merchant compliance, and explicit launch approval.
+
+**Phase 4.8 hold remains active. Production verdict: NO-GO.**
