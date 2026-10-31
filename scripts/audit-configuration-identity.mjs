@@ -7,6 +7,10 @@ export function auditConfigurationIdentity(candidates, observationData) {
   const findings = [];
   const products = new Map();
   for (const product of candidates.products ?? []) {
+    if (!product || typeof product !== 'object') {
+      findings.push({ severity: 'blocker', code: 'INVALID_CATALOG_PRODUCT_RECORD' });
+      continue;
+    }
     if (typeof product.id !== 'string' || !product.id.trim()) {
       findings.push({ severity: 'blocker', code: 'MISSING_CATALOG_PRODUCT_ID' });
       continue;
@@ -16,6 +20,10 @@ export function auditConfigurationIdentity(candidates, observationData) {
   }
   const assessmentIds = new Set();
   for (const assessment of observationData.candidateAssessments ?? []) {
+    if (!assessment || typeof assessment !== 'object') {
+      findings.push({ severity: 'blocker', code: 'INVALID_ASSESSMENT_RECORD' });
+      continue;
+    }
     if (typeof assessment.productId !== 'string' || !assessment.productId.trim()) {
       findings.push({ severity: 'blocker', code: 'MISSING_ASSESSMENT_PRODUCT_ID' });
       continue;
