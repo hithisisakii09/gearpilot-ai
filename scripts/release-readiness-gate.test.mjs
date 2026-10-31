@@ -15,6 +15,8 @@ describe('production readiness gate', () => {
     const result = evaluateReleaseGate({ catalog, observations, evidence });
     expect(result.verdict).toBe('NO_GO');
     expect(result.reason).toBe('PHASE_4_8_PUBLICATION_HOLD');
+    expect(result.evidenceAccepted).toBe(false);
+    expect(result.checks.every((check) => !check.verified)).toBe(true);
   });
   it('retains configuration blockers', () => {
     const result = evaluateReleaseGate({ catalog, observations: { candidateAssessments: [{ productId: 'desk', exactConfiguration: { desktopWidthInches: 36 } }] } });
