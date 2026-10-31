@@ -32,3 +32,12 @@ Use authenticated requests only from an approved operator session. Redact tokens
 - The existing Cloudflare Worker is **not** an isolated staging deployment with a verified Git SHA.
 - If a separate target, Access policy, header behavior or rollback route cannot be verified, stop and keep NO-GO.
 - No spending, merge, public production launch, affiliate activation, or contract is authorized by this checklist.
+
+## Local artifact checksum evidence (31 October 2026)
+
+- GitHub commit `83ba8617832066016e875279a098d02315087322` passed Verify (run `41222027571`), Evidence audit (run `41222027587`), and Global research audit (run `41222027611`).
+- The CI-only staging inventory script records each expected generated file's byte length and SHA-256 digest. It includes a Git commit identifier when GitHub Actions provides one, while explicitly leaving `deploymentId` and `deploymentUrl` null and `remoteVerified` false.
+- These checksums support a future comparison to an approved deployment's immutable build artifact. They do not independently prove that the Worker served those bytes, that its headers are correct, or that Access denies anonymous visitors.
+- A future reviewer must compare the actual deployment build ID, exact Git SHA, and artifact digests before claiming provenance. Do not infer any match from the Worker name or hostname alone.
+
+**No staging deployment or production release authorized. Phase 4.8 NO-GO remains active.**
