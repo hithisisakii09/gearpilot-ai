@@ -17,7 +17,9 @@ export function auditConfigurationIdentity(candidates, observationData) {
     for (const [field, label] of [['desktopWidthInches', 'width'], ['desktopDepthInches', 'depth']]) {
       const expected = product.specifications?.[field];
       const observed = config[field];
-      if (Number.isFinite(expected) && Number.isFinite(observed) && expected !== observed) {
+      if (observed !== undefined && !Number.isFinite(observed)) {
+        findings.push({ severity: 'warning', code: 'INVALID_ASSESSMENT_DIMENSION', productId: assessment.productId, field: label, configurationId: config.id ?? null });
+      } else if (Number.isFinite(expected) && Number.isFinite(observed) && expected !== observed) {
         findings.push({ severity: 'blocker', code: 'CONFIGURATION_MISMATCH', productId: assessment.productId, field: label, catalog: expected, assessment: observed, configurationId: config.id ?? null });
       }
     }
