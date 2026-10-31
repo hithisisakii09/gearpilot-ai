@@ -18,7 +18,7 @@ export function buildEvidenceLedger(intake, { generatedAt = new Date().toISOStri
     if (item.reviewStatus !== 'pending_review' || item.publicationAuthorized !== false) throw new Error('Evidence is not quarantined');
     const evidenceHash = sha(canonical(item));
     const chainHash = sha(previousHash + ':' + evidenceHash);
-    records.push({ evidenceHash, previousHash, chainHash, evidence: item });
+    records.push({ evidenceHash, previousHash, chainHash, evidence: structuredClone(item) });
     previousHash = chainHash;
   }
   return { version: 1, generatedAt, status: 'unreviewed', publicationAuthorized: false, recordCount: records.length, rootHash: previousHash, records };
