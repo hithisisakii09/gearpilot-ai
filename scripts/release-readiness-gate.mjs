@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { auditConfigurationIdentity } from './audit-configuration-identity.mjs';
 
 /** Read-only and fail-closed. Never authorizes deployment or publication. */
-export function evaluateReleaseGate({ catalog, observations, evidence = {} }) {
+export function evaluateReleaseGate({ catalog, observations }) {
   const findings = auditConfigurationIdentity(catalog, observations);
   const required = ['independentCodeReview', 'twoIndependentApprovers', 'separateCollector', 'privateEncryptedVersionedEvidence', 'liveStagingUat', 'stagingRollback', 'merchantCompliance', 'explicitLaunchApproval'];
   const checks = required.map((key) => ({ key, verified: false, status: 'requires_independent_verification' }));
