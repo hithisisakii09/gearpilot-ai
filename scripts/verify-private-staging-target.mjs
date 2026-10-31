@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const config = JSON.parse(await readFile(new URL('../wrangler.private-staging.json', import.meta.url), 'utf8'));
+assert.equal(config.name, 'gearpilot-ai-private-staging', 'Never target the production Worker');
+assert.equal(config.assets?.directory, './dist');
+assert.equal(config.assets?.not_found_handling, '404-page');
+assert.equal(config.preview_urls, false);
+assert.equal(config.workers_dev, true);
+assert.ok(!('routes' in config), 'Staging cannot attach production routes');
+assert.ok(!('route' in config), 'Staging cannot attach production route');
+assert.ok(!('account_id' in config), 'Do not commit Cloudflare account identifiers');
+assert.ok(!('vars' in config) && !('secrets' in config), 'No runtime secrets allowed');
+const headers = await readFile(new URL('../dist/_headers', import.meta.url), 'utf8');
+assert.match(headers, /X-Robots-Tag:\s*noindex, nofollow, noarchive/i);
+console.log('Isolated staging Wrangler target and generated headers verified. No deployment performed.');
