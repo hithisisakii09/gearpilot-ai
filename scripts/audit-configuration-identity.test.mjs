@@ -20,6 +20,10 @@ describe('read-only configuration identity audit', () => {
   it('does not flag a matching configuration', () => {
     expect(auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'branch-duo-standing-desk', exactConfiguration: { desktopWidthInches: 48, desktopDepthInches: 24 } }] })).toEqual([]);
   });
+  it('does not flag missing or nonfinite dimensions as mismatches', () => {
+    const data = { candidateAssessments: [{ productId: 'branch-duo-standing-desk', exactConfiguration: { desktopWidthInches: NaN, desktopDepthInches: 24 } }] };
+    expect(auditConfigurationIdentity(candidate, data)).toEqual([]);
+  });
   it('reports unknown candidate IDs without mutating inputs', () => {
     const data = { candidateAssessments: [{ productId: 'unknown', exactConfiguration: null }] };
     expect(auditConfigurationIdentity(candidate, data)[0].code).toBe('UNKNOWN_PRODUCT');
