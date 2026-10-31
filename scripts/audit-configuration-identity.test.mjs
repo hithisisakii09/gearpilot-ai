@@ -62,6 +62,12 @@ describe('read-only configuration identity audit', () => {
     const findings = auditConfigurationIdentity({ products: [{ id: 'desk' }] }, { observations: [{ id: 'offer-1', productId: 'desk', reviewStatus: 'pending_review' }] });
     expect(findings).toEqual([{ severity: 'warning', code: 'OBSERVATION_NOT_APPROVED', productId: 'desk', observationId: 'offer-1' }]);
   });
+  it('does not treat an approved observation label as authenticated evidence', () => {
+    const catalog = { products: [{ id: 'desk' }] };
+    const approved = auditConfigurationIdentity(catalog, { observations: [{ id: 'offer-1', productId: 'desk', reviewStatus: 'approved' }] });
+    expect(approved).toEqual([]);
+    // This audit only validates catalog consistency. Release authorization is enforced separately.
+  });
   it('reports unknown products as findings for human review', () => {
     const findings = auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'unmapped' }] });
     expect(findings).toEqual([{ severity: 'warning', code: 'UNKNOWN_PRODUCT', productId: 'unmapped' }]);
