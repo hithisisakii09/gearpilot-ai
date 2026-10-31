@@ -142,6 +142,8 @@ for (const bucket of session.buckets) {
   if (result?.jwt) completion = result.jwt;
 }
 assert.ok(completion, 'No completed asset upload token');
+assert.ok(session.buckets.length === 0 || completion !== session.jwt,
+  'Asset upload incomplete: Cloudflare did not return a completion token');
 const moduleSource = "export default { async fetch(request, env) { let response; try { response = await env.ASSETS.fetch(request); } catch { response = new Response('Staging temporarily unavailable', { status: 503 }); } const headers = new Headers(response.headers); headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive'); headers.set('Cache-Control', 'private, no-store'); return new Response(response.body, { status: response.status, statusText: response.statusText, headers }); } };";
 const metadata = {
   main_module: 'staging.mjs', compatibility_date: '2026-10-01',
@@ -167,6 +169,31 @@ const deployed = await api('POST', prefix + '/workers/scripts/' + WORKER + '/dep
   annotations: { 'workers/message': 'Isolated private staging ' + inventory.gitSha }
 });
 assert.ok(deployed.id, 'Cloudflare did not return a deployment ID');
+async function verifyAnonymousDenial() {
+  for (const route of ['/', '/robots.txt', '/sitemap.xml', '/about/', '/nonexistent-asset-probe']) {
+    const response = await fetch(HOST + route, { redirect: 'manual', signal: AbortSignal.timeout(12000) });
+    const redirectTo = response.headers.get('location') ?? '';
+    const blocked = response.status === 401 || response.status === 403 ||
+      ([302, 303, 307, 308].includes(response.status) && /cloudflareaccess\.com|\/cdn-cgi\/access/i.test(redirectTo));
+    assert.ok(blocked, 'Anonymous staging request was not blocked for ' + route + ' (status ' + response.status + ')');
+  }
+}
+try {
+  await checkProtection();
+  await verifyAnonymousDenial();
+} catch (failure) {
+  try {
+    await api('POST', prefix + '/workers/scripts/' + WORKER + '/deployments', {
+      strategy: 'percentage',
+      versions: [{ version_id: previous.versions[0].version_id, percentage: 100 }],
+      annotations: { 'workers/message': 'Automatic private staging rollback after security check failure' }
+    });
+  } catch (rollbackError) {
+    throw new Error('CRITICAL: staging security verification failed and rollback also failed: ' +
+      String(failure.message) + '; rollback: ' + String(rollbackError.message));
+  }
+  throw new Error('Private staging was rolled back: ' + String(failure.message));
+}
 console.log(JSON.stringify({ status: 'STAGING_DEPLOYED_PENDING_REMOTE_UAT', deploymentId: deployed.id,
   workerVersionId: version.id, rollbackVersionId: previous.versions[0].version_id,
   sourceCommit: inventory.sourceBranchHeadSha, buildCommit: inventory.gitSha, host: HOST }));
