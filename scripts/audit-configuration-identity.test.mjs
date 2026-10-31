@@ -24,6 +24,10 @@ describe('read-only configuration identity audit', () => {
     const data = { candidateAssessments: [{ productId: 'branch-duo-standing-desk', exactConfiguration: { desktopWidthInches: NaN, desktopDepthInches: 24 } }] };
     expect(auditConfigurationIdentity(candidate, data)).toEqual([{ severity: 'warning', code: 'INVALID_ASSESSMENT_DIMENSION', productId: 'branch-duo-standing-desk', field: 'width', configurationId: null }]);
   });
+  it('blocks duplicate catalog product identities instead of silently overwriting', () => {
+    const catalog = { products: [candidate.products[0], { ...candidate.products[0], specifications: { desktopWidthInches: 36, desktopDepthInches: 24 } }] };
+    expect(auditConfigurationIdentity(catalog, { candidateAssessments: [] })).toEqual([{ severity: 'blocker', code: 'DUPLICATE_CATALOG_PRODUCT_ID', productId: 'branch-duo-standing-desk' }]);
+  });
   it('reports unknown products as findings for human review', () => {
     const findings = auditConfigurationIdentity(candidate, { candidateAssessments: [{ productId: 'unmapped' }] });
     expect(findings).toEqual([{ severity: 'warning', code: 'UNKNOWN_PRODUCT', productId: 'unmapped' }]);
