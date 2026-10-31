@@ -29,6 +29,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   const catalogPath = new URL('../src/data/candidates.json', import.meta.url);
   const observationsPath = new URL('../src/data/observations.json', import.meta.url);
   const findings = auditConfigurationIdentity(JSON.parse(readFileSync(catalogPath, 'utf8')), JSON.parse(readFileSync(observationsPath, 'utf8')));
-  console.log(JSON.stringify({ status: findings.some((f) => f.severity === 'blocker') ? 'review_required' : 'no_blockers_found', findings }, null, 2));
+  console.log(JSON.stringify({ status: findings.length ? 'review_required' : 'no_findings', findings }, null, 2));
   // Exit successfully: a research finding must not alter data or trigger publication.
 }
