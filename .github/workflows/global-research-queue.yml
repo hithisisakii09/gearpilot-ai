@@ -20,6 +20,7 @@ jobs:
       - run: npm test -- --run scripts/research-evidence-intake.test.mjs
       - run: npm test -- --run scripts/evidence-ledger.test.mjs
       - run: npm test -- --run scripts/evidence-review-packet.test.mjs
+      - run: npm test -- --run scripts/reviewer-separation-audit.test.mjs
       - run: node scripts/agent-research-queue.mjs
       - run: npm test -- --run scripts/research-queue-audit.test.mjs
       - run: node scripts/research-queue-audit.mjs artifacts/research-queue-$(date -u +%F).json
