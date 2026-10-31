@@ -45,6 +45,7 @@ jobs:
           cp -a dist preflight-input/gearpilot-private-staging-local/dist
           cp staging-artifact-inventory.json preflight-input/gearpilot-private-staging-local/
           node scripts/verify-downloaded-staging-artifact.mjs preflight-input
+          node scripts/deploy-private-staging.mjs --plan preflight-input/gearpilot-private-staging-local
       - name: Upload validated private staging artifact (no deploy)
         uses: actions/upload-artifact@v4
         with:
