@@ -45,7 +45,7 @@ describe('read-only configuration identity audit', () => {
     ]);
   });
   it('blocks actual offer observations with mismatched dimensions', () => {
-    const findings = auditConfigurationIdentity({ products: [{ id: 'desk', specifications: { desktopWidthInches: 48, desktopDepthInches: 24 } }] }, { observations: [{ productId: 'desk', configuration: { desktopWidthInches: 36, desktopDepthInches: 24 } }] });
+    const findings = auditConfigurationIdentity({ products: [{ id: 'desk', specifications: { desktopWidthInches: 48, desktopDepthInches: 24 } }] }, { observations: [{ productId: 'desk', reviewStatus: 'approved', configuration: { desktopWidthInches: 36, desktopDepthInches: 24 } }] });
     expect(findings).toEqual([{ severity: 'blocker', code: 'OBSERVATION_CONFIGURATION_MISMATCH', productId: 'desk', field: 'desktopWidthInches', catalog: 48, observation: 36 }]);
   });
   it('blocks malformed observations without crashing', () => {
