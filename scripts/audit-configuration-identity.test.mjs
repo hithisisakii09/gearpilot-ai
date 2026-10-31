@@ -28,6 +28,9 @@ describe('read-only configuration identity audit', () => {
     const catalog = { products: [candidate.products[0], { ...candidate.products[0], specifications: { desktopWidthInches: 36, desktopDepthInches: 24 } }] };
     expect(auditConfigurationIdentity(catalog, { candidateAssessments: [] })).toEqual([{ severity: 'blocker', code: 'DUPLICATE_CATALOG_PRODUCT_ID', productId: 'branch-duo-standing-desk' }]);
   });
+  it('blocks catalog entries with missing product identity', () => {
+    expect(auditConfigurationIdentity({ products: [{ specifications: { desktopWidthInches: 48 } }] }, { candidateAssessments: [] })).toEqual([{ severity: 'blocker', code: 'MISSING_CATALOG_PRODUCT_ID' }]);
+  });
   it('blocks assessments with missing product identity', () => {
     expect(auditConfigurationIdentity(candidate, { candidateAssessments: [{ exactConfiguration: { desktopWidthInches: 48 } }] })).toEqual([{ severity: 'blocker', code: 'MISSING_ASSESSMENT_PRODUCT_ID' }]);
   });
