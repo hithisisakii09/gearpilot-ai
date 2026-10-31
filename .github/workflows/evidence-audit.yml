@@ -18,7 +18,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm test -- --run scripts/audit-configuration-identity.test.mjs
+      - name: Test configuration audit and release gate
+        run: npm test -- --run scripts/audit-configuration-identity.test.mjs scripts/release-readiness-gate.test.mjs
       - name: Produce research-only findings
         run: node scripts/audit-configuration-identity.mjs
       - name: Report production readiness (read-only; expected NO_GO)
