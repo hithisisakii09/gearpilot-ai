@@ -18,7 +18,8 @@
     "observations:ingest": "node --experimental-strip-types scripts/observations.ts ingest",
     "observations:review": "node --experimental-strip-types scripts/observations.ts review",
     "observations:record": "node --experimental-strip-types scripts/observations.ts record",
-    "quality:report": "node --experimental-strip-types scripts/observations.ts report"
+    "quality:report": "node --experimental-strip-types scripts/observations.ts report",
+    "audit:config": "node scripts/audit-configuration-identity.mjs"
   },
   "dependencies": {
     "astro": "^7.4.1",
