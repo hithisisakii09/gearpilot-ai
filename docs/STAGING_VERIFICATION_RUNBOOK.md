@@ -109,3 +109,13 @@ This section supersedes the earlier **hosting discovery** statements that Cloudf
 - A future authorized staging deployment must use a separately controlled target and verify Access denial and HTTP headers on that exact target. Do not apply these settings to the current 100%-traffic Worker merely to complete this checklist.
 
 **Phase 4.8 remains NO-GO. This evidence does not authorize production deployment or merging PR #23.**
+
+## Dual-mode SEO regression verification (31 October 2026)
+
+- GitHub commit `b882f4dc14090c02c7cb07f0ecfc300774ce00a5` completed **Verify** (run `41221276495`), **Evidence audit** (run `41221276373`), and **Global research audit** (run `41221276396`) successfully.
+- Verify now tests the default static build and local Playwright smoke flow, followed by `node scripts/verify-normal-seo.mjs`. It then builds with `GEARPILOT_STAGING_NOINDEX=true` and runs `node scripts/verify-staging-noindex.mjs`.
+- Normal-mode assertions cover seven page routes, their expected canonical URLs, index directives (contact remains noindex), and crawl-permissive `robots.txt`. Staging-mode assertions cover seven routes with noindex directives and absent canonical URLs, plus `robots.txt` disallowing all crawling.
+- These are generated-artifact checks on the draft branch, **not** a deployed staging test or a Cloudflare Access/HTTP-header validation. The staging HTTP `X-Robots-Tag`, Git-SHA-to-deployment provenance, remote authenticated UAT, rollback rehearsal and independent reviewer quorum remain outstanding.
+- Do not conflate a green CI result with a release gate approval. No production or staging deployment was performed as part of this verification.
+
+**Production verdict remains NO-GO.**
